@@ -31,187 +31,79 @@ warnings.simplefilter(action = 'ignore')
 def main():
     print('\n Evaluating recorded models \n')
     #Status takes : 'all', 'Archived', 'Deleted', 'Selected', 'xall'
-    evaluation(Accuracy = 0, AP_score = 0, ROC_AUC = 0, Model_performance = 0, status = 'all', stock = 'all', Duplicates = False).charts()
-    evaluation(Accuracy = 0, AP_score = 0, ROC_AUC = 0, Model_performance = 0, status = 'all', stock = 'all', Duplicates = False).time()
-    evaluation(Accuracy = 0, AP_score = 0, ROC_AUC = 0, Model_performance = 0, status = 'all', stock = 'all', Duplicates = True).results_traded()
-    evaluation(Accuracy = 0, AP_score = 0, ROC_AUC = 0, Model_performance = 0, status = 'all', stock = 'all', Duplicates = True).results_predicted()
-    evaluation(Accuracy = 0, AP_score = 0, ROC_AUC = 0, Model_performance = 0, status = 'all', stock = 'all', Duplicates = True).optimizer()
+    evaluation().charts()
+    #evaluation().results_traded()
+    #evaluation().results_predicted()
+    #evaluation().optimizer()
+    
 class evaluation :
-    def __init__(self, Accuracy, AP_score, ROC_AUC, Model_performance, status, stock, Duplicates):
-        self.accuracy = Accuracy
-        self.AP = AP_score
-        self.ROC_AUC = ROC_AUC
-        self.status = status
-        self.Model_performance = Model_performance
-        self.product = stock
-        self.Duplicates = Duplicates
+    def __init__(self):
         record = pd.read_csv('./data/record_model.csv').dropna()
-        record['Date'] = pd.to_datetime(record['Date'])
-        end_date = datetime.today() - pd.Timedelta("1 days")
-        record = record.loc[(record['Date'] > end_date)]
-        record = record[record['Long_AP_score'] > self.AP]
-        record = record[record['Long_ROC_AUC'] > self.ROC_AUC]
-        record = record[record['Long_accuracy'] > self.accuracy]
-        record = record[record['Long_Model_performance'] > self.Model_performance]
-            
-        if self.Duplicates == False :
-            record = record.drop_duplicates(subset=['Model_name'], keep='last')
-        
-        self.record = record
+        record = record.drop_duplicates(subset=['model_name'], keep='last')
+        record['date'] = pd.to_datetime(record['date'])
+        self.record = record.dropna()
         
     def charts (self):
         
         record = self.record
+        percentage_days = 10
+        percentage_days = percentage_days/100
+        record = record[record['days_traded_test'] > int(150*percentage_days)]
+        record = record[record['days_traded_live'] > int(100*percentage_days)]
         
-        models = np.array(record['Model_name'].tolist())
+        #record = record[record['status'] > 0]
+        accuracy_test = sorted(record['trade_accuracy_test'].to_list())[:-10]
+        accuracy_live = record['trade_accuracy_live'].to_list()
+        ROC_live = sorted(record['ROC_test'].to_list())[:-10]
         
-        Long_AP = np.array(record['Long_AP_score'].tolist())
-        Long_ROC = np.array(record['Long_ROC_AUC'].tolist())
-        Long_accuracy = np.array(record['Long_accuracy'].tolist())
-        Long_performance = np.array(record['Long_Model_performance'].tolist())
-        Days_Traded_long = np.array(record['Days_traded_long'].tolist())
+        mean_live_thr = []
+        mean_live_perf = []
+        std_live_thr = []
+        for value in accuracy_test :
+            mean_live_thr.append(np.mean(record['trade_accuracy_live'][record['trade_accuracy_test'] > value].to_list()))
+            std_live_thr.append(np.std(record['trade_accuracy_live'][record['trade_accuracy_test'] > value].to_list()))
+            mean_live_perf.append(np.mean(record['model_performance_live'][record['trade_accuracy_test'] > value].to_list()))
         
-        Weekly_AP = np.array(record['Weekly_AP_score'].tolist())
-        Weekly_ROC = np.array(record['Weekly_ROC_AUC'].tolist())
-        Weekly_accuracy = np.array(record['Weekly_accuracy'].tolist())
-        
-        Trade_accuracy = np.array(record['Trade_accuracy'].tolist())
-        Weekly_Trade_accuracy = np.array(record['Weekly_Trade_accuracy'].tolist())
-        Weekly_Days_traded = np.array(record['Weekly_Days_traded'].tolist())
-        
-        strong = len(np.where(Weekly_accuracy  > 60)[0])
-        
-        print('\nNumber of new models,', len(models))
-        print ('There are %d stong models, ' % strong)
-        print('Representing, ', np.round(100*strong/len(Weekly_accuracy),3), '% of models' )
-        print('Average Weekly accuracy is, ', np.round(np.mean(Weekly_accuracy),3))
-        print('Average Weekly ROC is, ', np.round(np.mean(Weekly_ROC),3))
-        print('Average Weekly traded accuracy is, ', np.round(np.mean(Weekly_Trade_accuracy ),3))
-        print('Average return is (long and no threshold), ', np.round(np.mean(Long_performance),3))
-        print('Max Weekly accuracy is, ', np.round(np.max(Weekly_accuracy),3))
-        print('Max Weekly ROC is, ', np.round(np.max(Weekly_ROC),3))
-        print('Max Weekly traded accuracy is, ', np.round(np.max(Weekly_Trade_accuracy ),3))
-        print('Max return is (long and no threshold), ', np.round(np.max(Long_performance),3))
-        
-        models = np.array(record['Model_name'].tolist())
-        
-        plt.plot(Long_accuracy, Long_AP,'*')
-        plt.title("f(accuracy) = AP_score")
-        z = np.polyfit(Long_accuracy.flatten(),  Long_AP.flatten(), 1)
-        p = np.poly1d(z)
-        plt.plot(Long_accuracy,p(Long_accuracy),"r--", label = "y=%.6fx+%.6f"%(z[0],z[1]))
-        plt.legend()
-        plt.show()
-        
-        plt.plot(Weekly_ROC, Weekly_Trade_accuracy,'*')
-        plt.title("f(ROC_AUC (weekly)) = Weekly trade accuracy")
-        z = np.polyfit(Weekly_ROC.flatten(), Weekly_Trade_accuracy.flatten(), 1)
-        p = np.poly1d(z)
-        plt.plot(Weekly_ROC, p(Weekly_ROC),"r-", label = "y=%.6fx+%.6f"%(z[0],z[1]))
-        plt.legend()
-        plt.show()
-        
-        plt.plot(Long_accuracy, Long_performance,'*')
-        plt.title("f(accuracy) = model_performance")
-        z = np.polyfit(Long_accuracy.flatten(),  Long_performance.flatten(), 1)
-        p = np.poly1d(z)
-        plt.plot(Long_accuracy,p(Long_accuracy),"r--", label = "y=%.6fx+%.6f"%(z[0],z[1]))
-        plt.legend()
-        plt.show()
-        
-        plt.plot(Long_ROC, Weekly_ROC,'*')
-        plt.title("f(ROC) = Weekly_ROC")
-        z = np.polyfit(Long_ROC.flatten(),  Weekly_ROC.flatten(), 1)
-        p = np.poly1d(z)
-        plt.plot(Long_ROC,p(Long_ROC),"r--", label = "y=%.6fx+%.6f"%(z[0],z[1]))
-        plt.legend()
-        plt.show()
-        
-        used = record['Used'].tolist()
-        
-        length = []
-        for use in used :
-            res = ast.literal_eval(use)
-            length.append(len(res))
-        
-        points = list(set(length))
-        length = np.array(length)
-        Long_accuracy = np.array(Long_accuracy)
-        y_value = []
-        y_error = []
-        for point in points :
-            pos = np.where(length == point)
-            y_error.append(np.std(Long_accuracy[pos]))
-            y_value.append(np.mean(Long_accuracy[pos]))
+        mean_live_ROC_thr = []
+        mean_live_ROC_perf = []
+        std_live_ROC_thr = []
+        for value in ROC_live :
+            mean_live_ROC_thr.append(np.mean(record['trade_accuracy_live'][record['ROC_test'] > value].to_list()))
+            std_live_ROC_thr.append(np.std(record['trade_accuracy_live'][record['ROC_test'] > value].to_list()))
+            mean_live_ROC_perf.append(np.mean(record['model_performance_live'][record['ROC_test'] > value].to_list()))
             
-        plt.errorbar(points, y_value,
-             yerr = y_error,
-             fmt ='o')
-        plt.title("f(length_used) = Accuracy")
-        z = np.polyfit(np.array(points).flatten(),  np.array(y_value).flatten(), 1)
-        p = np.poly1d(z)
-        plt.plot(np.array(points), p(np.array(points)),"r-", label = "y=%.6fx+%.6f"%(z[0],z[1]))
-        plt.legend()
+        print('mean_test', np.round(np.mean(accuracy_test),2))
+        print('mean_live', np.round(np.mean(accuracy_live),2))
+        
+        plt.title('Mean live accuracy over threshold')
+        plt.xlabel('Test accuracy threshold')
+        plt.ylabel('Mean live accuracy above threshold')
+        plt.plot(accuracy_test, mean_live_thr, 'o')
         plt.show()
         
-        features = []
-        for model in models :
-            n = float(model.split('-')[1])
-            if n == 0:
-                n = 100
-            
-            features.append(n)
-            
-        points = (np.linspace(30,500,int((500-30)/30))).astype(int)
-        features = np.array(features)
-        Long_accuracy = np.array(Long_accuracy)
-        feature_n = []
-        y_value = []
-        y_error = []
-        for point in points :
-            pos = np.where(((point - 30) < features) & (features < point + 30))
-            if len(pos[0]) > 0 :
-                feature_n.append(np.mean(features[pos]))
-                y_error.append(np.std(Long_accuracy[pos]))
-                y_value.append(np.mean(Long_accuracy[pos]))
-        
-        plt.errorbar(feature_n, y_value,
-             yerr = y_error,
-             fmt ='o')
-        plt.title("f(features) = Accuracy")
-        z = np.polyfit(np.array(feature_n).flatten(),  np.array(y_value).flatten(), 1)
-        p = np.poly1d(z)
-        plt.plot(np.array(feature_n), p(np.array(feature_n)),"r-", label = "y=%.6fx+%.6f"%(z[0],z[1]))
-        plt.legend()
+        plt.title('Mean live accuracy over ROC threshold')
+        plt.xlabel('Test ROC threshold')
+        plt.ylabel('Mean live accuracy above threshold')
+        plt.plot(ROC_live, mean_live_ROC_thr, 'o')
         plt.show()
         
-        # accuracy_no_weight = []
-        # accuracy_weight = []
-        # counter = 0
-        # for model in models :
-        #     res = [int(i) for i in model.split('-') if i.isdigit()]
-        #     if len(res) > 2 :
-        #         if res[1] == 0:
-        #             accuracy_no_weight.append(Weekly_Trade_accuracy[counter])
-        #         if res[1] == 1:
-        #             accuracy_weight.append(Weekly_Trade_accuracy[counter])
-        #     counter += 1
-                    
-        # plt.plot([0, 1],[np.mean(accuracy_no_weight),np.mean(accuracy_weight)], 'x')
-        # plt.xticks([0,1])
+        # plt.title('Standard deviation of performance over threshold')
+        # plt.xlabel('Test accuracy threshold')
+        # plt.ylabel('standard deviation above threshold')
+        # plt.plot(accuracy_test, std_live_thr, 'o')
         # plt.show()
-        # print('\nNumber without weights,', len(accuracy_no_weight))
-        # print('Number with weights,', len(accuracy_weight))
         
-        return
-    
-    def time(self):
-        record = pd.read_csv('./data/record_model.csv')
-        record['Date'] = pd.to_datetime(record['Date'])
-        mean = record.groupby('Date').mean()
-        plt.figure()
-        mean['Long_Model_performance'].plot()
+        plt.title('Trading results over threshold')
+        plt.xlabel('Test accuracy threshold')
+        plt.ylabel('Live results over threshold')
+        plt.plot(accuracy_test, mean_live_perf, 'o')
+        plt.show()
         
+        plt.title('Trading results over ROC threshold')
+        plt.xlabel('Test ROC threshold')
+        plt.ylabel('Live results over threshold')
+        plt.plot(ROC_live, mean_live_ROC_perf, 'o')
+        plt.show()
 
     def results_traded(self) :
         record = pd.read_csv('./data/record_traded.csv')

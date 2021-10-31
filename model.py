@@ -34,7 +34,7 @@ def main():
     date_sent = nyc_datetime - pd.Timedelta("1 days")
     for j in range(0,1000):
         maker = 0
-        if j == 0 :
+        if j == -10 :
             maker = 1
             market(maker).stock_matrix()
             maker = 0
@@ -68,22 +68,12 @@ class market :
         self.flag = 0
         self.maker = maker
         
-        rec_model = glob.glob('./data/record_model.{}'.format('csv'))
-        if rec_model == [] :
-            record = pd.DataFrame({'Date' : [], 'Model_name' : [], 
-                            'Stock': [], 'Used' : [], 
-                            'Parameters' : [], 'Long_accuracy' : [], 
-                            'Long_AP_score' : [], 'Long_ROC_AUC': [], 'Long_Market_performance' : [], 
-                            'Long_Model_performance' : [], 'Weekly_accuracy' : [], 
-                            'Weekly_AP_score' : [], 'Weekly_ROC_AUC': [], 'Status' : []})
-            record.to_csv('./data/record_model.csv', index = False)
-            
         # Halt during pre-trading times
-        nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-        start = nyc_datetime.replace(hour=7, minute=20, second=0,microsecond=0)
-        end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
-        if (nyc_datetime > start) & (nyc_datetime < end) :
-            time.sleep(3600)
+        # nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+        # start = nyc_datetime.replace(hour=7, minute=20, second=0,microsecond=0)
+        # end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
+        # if (nyc_datetime > start) & (nyc_datetime < end) :
+        #     time.sleep(3600)
        
     def stock_matrix(self) :
         print('\nMaking stock links matrix\n')
@@ -128,11 +118,12 @@ class market :
             for stock_a in possibilities :
                 line = 0
                 for stock_b in possibilities :  
-                    model = stock_a + '-' + str(100) + '-' + str(0) + '-' + stock_b + '-' + str(0)
+                    model = stock_a + '-' + str(100) + '-' + str(0) + '-' + stock_a + '-' + stock_b + '-' + str(0)
                     if (record['trade_accuracy_test'][record['model_name'] == model].tolist() != []) :
-                        value = record['Weekly_ROC_AUC'][record['Model_name'] == model].iloc[0]
+                        ROC_test = record['ROC_test'][record['model_name'] == model].iloc[0]
+                        accuracy_test = record['accuracy_test'][record['model_name'] == model].iloc[0]
                         #print(model, 'Has ROC AUC of', ROC)
-                        self.links[stock_a].iloc[line] = value
+                        self.links[stock_a].iloc[line] = (ROC_test + accuracy_test)/2
                     line += 1
         
             self.links = self.links.reset_index()

@@ -40,11 +40,11 @@ class market :
         self.price_data = pd.read_csv('./data/features_store.csv',',')
         
         # Halt during pre-trading times
-        nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-        start = nyc_datetime.replace(hour=7, minute=20, second=0,microsecond=0)
-        end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
-        if (nyc_datetime > start) & (nyc_datetime < end) :
-            time.sleep(5400)
+        # nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+        # start = nyc_datetime.replace(hour=7, minute=20, second=0,microsecond=0)
+        # end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
+        # if (nyc_datetime > start) & (nyc_datetime < end) :
+        #     time.sleep(5400)
         
     def error_handling(self, error_message) :
         today = datetime.today()
@@ -92,9 +92,10 @@ class market :
         price_data['Date'] = pd.to_datetime(price_data['Date']) 
         dates = price_data['Date']
         dates = dates.drop_duplicates()
+        dates = dates.iloc[100:]
         today = dates.iloc[0]
-        last_date = dates.iloc[5*(self.live) + 1*(self.test>0)*(55 + 5*self.test)]
-        first_date = dates.iloc[1*(self.live>0)*5*(self.live+1) + 1*(self.test>0)*(55 + 5*(self.test+1))] # We chose 200 as upper limit
+        last_date = dates.iloc[5*(self.live) + 1*(self.test>0)*(105 + 5*self.test)]
+        first_date = dates.iloc[1*(self.live>0)*5*(self.live+1) + 1*(self.test>0)*(105 + 5*(self.test+1))] # We chose 200 as upper limit
         price_data = price_data.loc[(price_data['Date'] < today)]
         self.price_data_train = price_data[price_data['stock'].isin(use)].loc[(price_data['Date'] < first_date)]
         self.price_data_test = price_data[price_data['stock'] == self.predict].loc[(price_data['Date'] < last_date)]
@@ -122,7 +123,7 @@ class market :
                             'model_performance_test' : [np.round(self.account_test,2)], 
                             'accuracy_live' : [np.round(self.accuracy_live,2)], 'ROC_live': [np.round(self.ROC_live,2)], 
                             'trade_accuracy_live' : [np.round(self.accuracy_live_trade,2)], 'days_traded_live' : [self.days_live], 
-                            'model_level_live' : [self.model_level_live], 'market_performance_live' : [np.round(self.market_live,2)], 
+                            'model_level_live' : [np.round(self.model_level_live,2)], 'market_performance_live' : [np.round(self.market_live,2)], 
                             'model_performance_live' : [np.round(self.account_live,2)], 
                             'status' : [self.test]})
         
@@ -271,6 +272,7 @@ class market :
         
         self.files()            
         for model in self.all :
+            features = pd.read_csv('./data/model_features.csv')
             print(model)
             self.layout(model)
             print(self.parameters)
@@ -313,7 +315,7 @@ class market :
             self.proba = []
             variations = []
             self.test = 0
-            for i in range (1,11):
+            for i in range (1,21):
                 self.live = i
                 self.prep()
                 if len(self.y_test)>0:
@@ -343,9 +345,11 @@ class market :
             
             n_best_models = len(glob.glob(os.getcwd() + '/Best_models/*.{}'.format('csv')))
             pass_threshold = 61 + (n_best_models/40)
+            percent_days = 10/100
             print('\n Using pass threshold of', pass_threshold)
             if  (self.ROC_test > pass_threshold) &  (self.ROC_live > pass_threshold) & \
-                    (self.accuracy_test_trade > pass_threshold) & (self.accuracy_live_trade > pass_threshold) :
+                    (self.accuracy_test_trade > pass_threshold) & (self.accuracy_live_trade > pass_threshold) & \
+                        (self.days_test > int(150*percent_days)) & (self.days_live > int(100*percent_days)) :
                 self.test = 1
             else :
                 self.test = 0
@@ -360,7 +364,6 @@ class market :
                 print(model, '\n Will be deleted \n')
                 os.remove(model)
                 self.status = 0
-                features = pd.read_csv('./data/model_features.csv')
                 features = features.drop([self.model.replace(".csv", "")], axis=1)
                         
             self.record()
@@ -373,7 +376,7 @@ class market :
     def execute(self) :
         start = datetime.now()
         self.test_all()
-        self.best_model_purging()
+        #self.best_model_purging()
         stop = datetime.now()
         print('\n Time for model evaluation : ', (stop - start))
 
