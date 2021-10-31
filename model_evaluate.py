@@ -57,13 +57,18 @@ class market :
         time.sleep(10000000)
               
     def verify_features_store(self):
-        price_data = pd.read_csv('./data/features_store.csv',',')
+        price_data = pd.read_csv('./data/features_store.csv')
         price_data['Date'] = pd.to_datetime(price_data['Date'])
         today = datetime.today()
-        if price_data['Date'].iloc[0] < today - timedelta(days=10) :
+        if price_data['Date'].iloc[0] < today - timedelta(days=50) :
             error_message = "The features store has not been updated for ten or more days, this is evaluated as a fatal error as it can lead to incorrect models, please update features store"
             self.error_handling(error_message)
-                    
+        
+        record_model_available = len(glob.glob('./data/record_model.csv'))
+        if not record_model_available :
+            record = pd.DataFrame(columns=['date', 'model_name', 'stock', 'used', 'parameters', 'accuracy_test', 'ROC_test','trade_accuracy_test','days_traded_test', 'model_level_test', 'market_performance_test','model_performance_test', 'accuracy_live', 'ROC_live','trade_accuracy_live', 'days_traded_live','model_level_live', 'market_performance_live','model_performance_live','status'])
+            record.to_csv('./data/record_model.csv', index = False)  
+        
     def files (self) :
         self.all = glob.glob(os.getcwd() + '/models/*.{}'.format('csv'))
         
@@ -83,83 +88,50 @@ class market :
                 
     def prep(self) :
         price_data = self.price_data
-        price_data['Date'] = pd.to_datetime(price_data['Date'])
         use = self.use 
+        price_data['Date'] = pd.to_datetime(price_data['Date']) 
         dates = price_data['Date']
         dates = dates.drop_duplicates()
-        dates = dates.tolist()
-        
-        end_date = dates[self.test * 5]
-        if self.test == 0 :
-            intermediate = dates[100]
-        else : 
-            intermediate = dates[(self.test + 1) * 5]    
-        intermediate = intermediate.strftime('%Y - %m - %d')
-        end_date = end_date.strftime('%Y - %m - %d')
-        today = self.price_data['Date'].iloc[0] 
-        
-        price_data['Date'] = pd.to_datetime(price_data['Date']) 
+        today = dates.iloc[0]
+        last_date = dates.iloc[5*(self.live) + 1*(self.test>0)*(55 + 5*self.test)]
+        first_date = dates.iloc[1*(self.live>0)*5*(self.live+1) + 1*(self.test>0)*(55 + 5*(self.test+1))] # We chose 200 as upper limit
         price_data = price_data.loc[(price_data['Date'] < today)]
-        
-        print ('\n Testing from ', intermediate, 'to', end_date, ':')
-        
-        self.price_data_train = price_data[price_data['stock'].isin(use)].loc[(price_data['Date'] < intermediate)]
-        self.price_data_test = price_data[price_data['stock'] == self.predict].loc[(price_data['Date'] < end_date) & (price_data['Date'] >= intermediate)]
-        
+        self.price_data_train = price_data[price_data['stock'].isin(use)].loc[(price_data['Date'] < first_date)]
+        self.price_data_test = price_data[price_data['stock'] == self.predict].loc[(price_data['Date'] < last_date)]
+        self.price_data_test = self.price_data_test.loc[(price_data['Date'] >= first_date)]
         self.y_train = self.price_data_train['delta_class'].tolist()
         self.y_test = self.price_data_test['delta_class'].tolist() 
         
-        if self.use_weights == 1 :
-            self.make_weights()
-        else :   
-            self.weights = np.ones(len(self.y_train))
-            
         record = pd.read_csv('./data/model_features.csv')
         self.features_name = record[self.model.replace(".csv", "")].dropna().tolist()
-        self.features_name = [x for x in self.features_name if x in price_data.columns]
+        self.features_name = [x for x in self.features_name if x in price_data.columns]               
         self.X_train = self.price_data_train[self.features_name]
         self.X_test = self.price_data_test[self.features_name]
-
+            
         return 
-    
-    def make_weights(self) :
-        links = pd.read_csv('./data/stock_links.csv')
-        weight = self.price_data_train[['stock','delta']]
-        for stock in self.use :
-            weight['stock'].loc[weight['stock'] == stock] = links[self.predict].loc[links['index'] == stock].values[0] * (2/100)
-        
-        weight['delta'].loc[weight['delta'] > 1] = 2
-        weight['delta'].loc[weight['delta'] < -1] = 2
-        weight['delta'].loc[weight['delta'] != 2] = 1
-        
-        self.weights = weight['delta'] + weight['stock']
-        self.weights = self.weights.tolist()
         
     def record(self):
         record = pd.read_csv('./data/record_model.csv')
         today = datetime.today()
-        rec = pd.DataFrame({'Date' : today.strftime('%Y - %m - %d'), 'Model_name' : self.model.replace(".csv", ""), 
-                            'Stock': self.predict, 'Used' : str(self.use), 
-                            'Parameters' : str(list(self.parameters.items())), 'Long_accuracy' : [self.accuracy], 
-                            'Long_AP_score' : [self.AP], 'Long_ROC_AUC': [self.ROC], 'Long_Market_performance' : [self.market_per], 
-                            'Long_Model_performance' : [self.model_per], 'Weekly_accuracy' : [self.accuracy_short], 
-                            'Weekly_AP_score' : [self.AP_short], 'Weekly_ROC_AUC': [self.ROC_short],
-                            'Trade_accuracy' : [self.accuracy_trade], 'Weekly_Trade_accuracy' : [self.accuracy_short_trade],
-                            'Days_traded_long' : [self.days_long], 'Weekly_Days_traded' : [self.days_weekly],
-                            'Model_level' : [self.model_level], 'Status' : [self.test]})
+        rec = pd.DataFrame({'date' : today.strftime('%Y - %m - %d'), 'model_name' : self.model.replace(".csv", ""), 
+                            'stock': self.predict, 'used' : str(self.use), 
+                            'parameters' : str(list(self.parameters.items())), 
+                            'accuracy_test' : [np.round(self.accuracy_test,2)], 'ROC_test': [np.round(self.ROC_test,2)], 
+                            'trade_accuracy_test' : [np.round(self.accuracy_test_trade,2)], 'days_traded_test' : [self.days_test], 
+                            'model_level_test' : [np.round(self.model_level_test,2)], 'market_performance_test' : [np.round(self.market_test,2)], 
+                            'model_performance_test' : [np.round(self.account_test,2)], 
+                            'accuracy_live' : [np.round(self.accuracy_live,2)], 'ROC_live': [np.round(self.ROC_live,2)], 
+                            'trade_accuracy_live' : [np.round(self.accuracy_live_trade,2)], 'days_traded_live' : [self.days_live], 
+                            'model_level_live' : [self.model_level_live], 'market_performance_live' : [np.round(self.market_live,2)], 
+                            'model_performance_live' : [np.round(self.account_live,2)], 
+                            'status' : [self.test]})
         
         record = record.append(rec, ignore_index=True)
         record.to_csv('./data/record_model.csv', index = False)
 
-    def money(self, variations) :
-        
-        if variations == [] : 
-            variation = self.price_data_test['delta'].values.tolist()
-        else :
-            variation = variations
-            
-        variation = np.array(variation)/100
-        prediction = self.y_pred
+    def money(self, variations, predictions) :
+                    
+        variation = np.array(variations)/100
         
         market = [1]
         account_long = [1]
@@ -168,11 +140,11 @@ class market :
         cost = 0
         
         for i in range (len(variation)):
-            if (prediction[i]>0):
+            if (predictions[i]>0):
                 account_long.append(account_long[-1] + account_long[-1] * (variation[i] - cost))
                 account_short.append(account_short[-1])
                 account_both.append(account_both[-1]+account_both[-1] * (variation[i] - cost))
-            elif (prediction[i]<0) :
+            elif (predictions[i]<0) :
                 account_long.append(account_long[-1])
                 account_short.append(account_short[-1] - account_short[-1] * (variation[i] + cost))
                 account_both.append(account_both[-1] - account_both[-1] * (variation[i] + cost))
@@ -265,7 +237,7 @@ class market :
         return thresholds[n]
     
     def ml_model(self):
-        train_data = lgb.Dataset(self.X_train,label=self.y_train, weight=self.weights)
+        train_data = lgb.Dataset(self.X_train,label=self.y_train)
         num_round = 10
         self.lgbm = lgb.train(self.parameters,train_data,num_round, verbose_eval=False)
         self.y_probs = self.lgbm.predict(self.X_test)
@@ -296,42 +268,53 @@ class market :
                 os.remove(model)
                            
     def test_all(self) :
-        self.files()
-        features = pd.read_csv('./data/model_features.csv')
+        
+        self.files()            
         for model in self.all :
-            accuracy = []
-            gain = []
-            market = []
             print(model)
             self.layout(model)
-            self.test = 0
-            self.prep()
             print(self.parameters)
-            self.ml_model ()
-            self.market_per = self.money([])[1]
-            self.model_per = self.money([])[0]
-            self.metric(self.y_probs)
-            self.accuracy = accuracy_score(self.y_test, self.y_pred, normalize = True) * 100.0
-            self.accuracy_trade = accuracy_score(self.y_true_trade, self.y_trade, normalize = True) * 100.0
-            self.AP = average_precision_score(self.y_test, self.y_probs) * 100
-            self.ROC = roc_auc_score(self.y_test, self.y_probs) * 100
-            feature_imp = pd.Series(self.lgbm.feature_importance(), index=self.X_test.columns).sort_values(ascending=False)
-            self.days_long = len(self.y_trade)
 
-            print('\nModel accuracy over 100 days is :', np.round(self.accuracy,2))
-            print('Model accuracy over 55 % over 100 days is :', np.round(self.accuracy_trade,2))
-            print ('ROC AUC over 100 days is :', np.round(self.ROC,2))
-            print ('Average precision score over 100 days is :', np.round(self.AP,2))
-            print ('Market gain over 100 days is :', np.round(self.market_per,2), '\n Model gain over 100 days is :', np.round(self.model_per,2), '\n')
-            print('Traded', np.round(int(self.days_long),2), 'days')
+            self.prediction = []
+            correct = []
+            self.proba = []
+            variations = []
+            self.live = 0
+            for i in range (1,31):
+                self.test = i
+                self.prep()
+                if len(self.y_test)>0:
+                    self.ml_model()
+                    self.prediction.extend(self.y_pred)
+                    correct.extend(self.y_test)
+                    self.proba.extend(self.y_probs)
+                    variations.extend(self.price_data_test['delta'].tolist())
+                    #print('Completed :', np.round(100*i/30,2), '%')
+            
+            self.account_test, self.market_test = self.money(variations, self.prediction)
+            self.y_test = correct
+            self.metric(self.proba)
+            self.accuracy_test = accuracy_score(correct, self.prediction, normalize = True) * 100
+            self.accuracy_test_trade = accuracy_score(self.y_true_trade, self.y_trade, normalize = True) * 100.0
+            self.ROC_test = roc_auc_score(correct, self.proba) * 100
+            self.days_test = len(self.y_trade)
+            self.model_level_test = self.threshold()
+            
+            print ('\nThe metrics over the test are : ')
+            print('Model accuracy is :', np.round(self.accuracy_test,2))
+            print('Buy and hold :', np.round(self.market_test,2), 'model :', np.round(self.account_test,2))
+            print('Model accuracy over 55% is :', np.round(self.accuracy_test_trade,2))
+            print('Model ROC AUC is :', np.round(self.ROC_test,2))
+            print('Traded', np.round(int(self.days_test),2), 'days')
+            print('Model trade threshold is', np.round(self.model_level_test,2))
             
             self.prediction = []
             correct = []
             self.proba = []
             variations = []
-            for i in range (1,30):
-                
-                self.test = i
+            self.test = 0
+            for i in range (1,11):
+                self.live = i
                 self.prep()
                 if len(self.y_test)>0:
                     self.ml_model ()
@@ -339,30 +322,30 @@ class market :
                     correct.extend(self.y_test)
                     self.proba.extend(self.y_probs)
                     variations.extend(self.price_data_test['delta'].tolist())
-                    print('Completed :', np.round(100*i/30,2), '%')
+                    #print('Completed :', np.round(100*i/10,2), '%')
             
+            self.account_live, self.market_live = self.money(variations, self.prediction)
             self.y_test = correct
             self.metric(self.proba)
-            self.accuracy_short = accuracy_score(correct, self.prediction, normalize = True) * 100
-            self.accuracy_short_trade = accuracy_score(self.y_true_trade, self.y_trade, normalize = True) * 100.0
-            self.AP_short = average_precision_score(correct, self.proba) * 100
-            self.ROC_short = roc_auc_score(correct, self.proba) * 100
-            self.days_weekly = len(self.y_trade)
-            self.model_level = self.threshold()
+            self.accuracy_live = accuracy_score(correct, self.prediction, normalize = True) * 100
+            self.accuracy_live_trade = accuracy_score(self.y_true_trade, self.y_trade, normalize = True) * 100.0
+            self.ROC_live = roc_auc_score(correct, self.proba) * 100
+            self.days_live = len(self.y_trade)
+            self.model_level_live = self.threshold()
             
-            print ('\nThe metrics over all periods considered are : ')
-            print('Model accuracy is :', np.round(self.accuracy_short,2))
-            print('Model accuracy over 55% is :', np.round(self.accuracy_short_trade,2))
-            print('Model ROC AUC is :', np.round(self.ROC_short,2))
-            print('Average precision score is :', np.round(self.AP_short,2))
-            print('Traded', np.round(int(self.days_weekly),2), 'days')
-            print('Model trade threshold is', np.round(self.model_level,2))
-            
+            print ('\nThe metrics over the live test are : ')
+            print('Model accuracy is :', np.round(self.accuracy_live,2))
+            print('Buy and hold :', np.round(self.market_live,2), 'model :', np.round(self.account_live,2))
+            print('Model accuracy over 55% is :', np.round(self.accuracy_live_trade,2))
+            print('Model ROC AUC is :', np.round(self.ROC_live,2))
+            print('Traded', np.round(int(self.days_live),2), 'days')
+            print('Model trade threshold is', np.round(self.model_level_live,2))
             
             n_best_models = len(glob.glob(os.getcwd() + '/Best_models/*.{}'.format('csv')))
             pass_threshold = 61 + (n_best_models/40)
             print('\n Using pass threshold of', pass_threshold)
-            if  (self.ROC_short > pass_threshold) &  (self.accuracy_short_trade > pass_threshold) :
+            if  (self.ROC_test > pass_threshold) &  (self.ROC_live > pass_threshold) & \
+                    (self.accuracy_test_trade > pass_threshold) & (self.accuracy_live_trade > pass_threshold) :
                 self.test = 1
             else :
                 self.test = 0
@@ -377,6 +360,7 @@ class market :
                 print(model, '\n Will be deleted \n')
                 os.remove(model)
                 self.status = 0
+                features = pd.read_csv('./data/model_features.csv')
                 features = features.drop([self.model.replace(".csv", "")], axis=1)
                         
             self.record()
