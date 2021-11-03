@@ -23,11 +23,10 @@ warnings.simplefilter(action='ignore')
 
 
 def main():
-    #print('\n Creating price & econometric features for %s ...' % sys.argv[1])
-    #features(symbol = sys.argv[1]).execute()
-    #print(' Done creating price features for %s' % sys.argv[1])
-    features(symbol='AAPL').execute()
-
+    print('\n Creating price & econometric features for %s ...' % sys.argv[1])
+    features(symbol = sys.argv[1]).execute()
+    print(' Done creating price features for %s' % sys.argv[1])
+    #features(symbol='AAPL').execute() # This line is reserved for testing
 
 class features:
     def __init__(self, symbol):
