@@ -52,8 +52,6 @@ class features:
         combinations = [0, 1, 2, 3, 5, 7, 10, 15, 20, 50]
         
         price_data = self.get_price(self.symbol)
-        print(price_data)
-        exit(0)
         price_data.set_index('Date', inplace=True)
         price_data['symbol'] = self.symbol
         
@@ -87,8 +85,6 @@ class features:
         
         self.price_data = price_data
 
-        print(price_data)
-        exit(0)
          
         return 
     
