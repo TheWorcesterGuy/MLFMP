@@ -16,6 +16,8 @@ import time
 import finnhub
 import glob
 import random
+import yahoo_fin
+import yahoo_fin.stock_info as si
 #warnings.simplefilter(action='ignore')
 
 
@@ -52,12 +54,24 @@ def main():
 
 
 def get_price(ticker, start_date):
-
-    end_date = datetime.today().date() + pd.DateOffset(days=1)
-    temp = yf.download(ticker, start=start_date, end=end_date, progress=False)
-    temp = temp.reset_index()
-    temp.drop_duplicates(subset=['Date'])
-    time.sleep(1)
+    column_names = ['Date', 'Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume']
+    try :
+        end_date = datetime.today().date() + pd.DateOffset(days=1)
+        temp = yf.download(ticker, start=start_date, end=end_date, progress=False)
+        temp = temp.reset_index()
+        temp = temp.drop_duplicates(subset=['Date'])
+        time.sleep(1)
+    except :
+        print('Using backup data API')
+        start = start_date
+        end = datetime.today().date() + pd.DateOffset(days=1)
+        temp = si.get_data(ticker , start_date = start , end_date = end)
+        temp = temp.reset_index()
+        temp = temp.rename(columns={"index": "Date"})
+        temp = temp.drop_duplicates(subset=['Date'])
+        temp = temp.drop(['ticker'], axis=1)
+        temp = temp.set_axis(column_names, axis=1, inplace=False)
+        time.sleep(1)
 
     return temp
     
