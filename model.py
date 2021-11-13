@@ -26,6 +26,8 @@ import warnings
 import pytz
 from email_updates_error import *
 from email_updates_model_report import *
+import shap
+import copy
 warnings.filterwarnings("ignore")
 
 def main():
@@ -34,7 +36,7 @@ def main():
     date_sent = nyc_datetime - pd.Timedelta("1 days")
     for j in range(0,1000):
         maker = 0
-        if j == -10 :
+        if j == -1 :
             maker = 1
             market(maker).stock_matrix()
             maker = 0
@@ -78,7 +80,6 @@ class market :
     def stock_matrix(self) :
         print('\nMaking stock links matrix\n')
         self.maker = 1
-        self.use_weights = 0
         for stock_a in self.possibilities : 
             for stock_b in self.possibilities :
                 print('For', stock_a, 'Using', stock_b)
@@ -118,7 +119,7 @@ class market :
             for stock_a in possibilities :
                 line = 0
                 for stock_b in possibilities :  
-                    model = stock_a + '-' + str(100) + '-' + str(0) + '-' + stock_a + '-' + stock_b + '-' + str(0)
+                    model = stock_a + '-' + stock_a + '-' + stock_b + '-' + str(0)
                     if (record['trade_accuracy_test'][record['model_name'] == model].tolist() != []) :
                         ROC_test = record['ROC_test'][record['model_name'] == model].iloc[0]
                         accuracy_test = record['accuracy_test'][record['model_name'] == model].iloc[0]
@@ -162,46 +163,49 @@ class market :
         self.y_test = self.price_data_test['delta_class'].tolist() 
         self.weights = []
                         
-        if self.flag == 0 :
-            self.features_name = self.all_features ()
-            self.X_train = self.price_data_train[self.features_name]
-            self.X_test = self.price_data_test[self.features_name]
-        else :
-            self.X_train = self.price_data_train[self.features_name]
-            self.X_test = self.price_data_test[self.features_name]
+        self.features_name = self.all_features ()
+        self.X_train = self.price_data_train[self.features_name]
+        self.X_test = self.price_data_test[self.features_name]
             
         return 
         
     def make_model (self) :
-        self.flag = 0
-        y_train = self.y_train
-        X_train = self.X_train     
-        train_data=lgb.Dataset(X_train,label=y_train)
         
         self.train_names = '-'.join(self.use)
-        self.model = self.predict + '-' + str(self.n_features) + '-' + str(self.use_weights) + '-' + self.train_names + '-' + str(0)
-        leaves = [300,400, 500, 450, 550, 600, 650, 700]
-        depth = [3,5,2,4,6]
-        rate = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]
-        bins = [10,20,30,50,100,200,300,400,500]
-        param = {'num_leaves':400, 'objective':'binary','max_depth':2,'learning_rate':0.1,'max_bin':50, 'num_threads':12, 'verbose': -1, 'is_unbalance': True}
-        num_round=50
-        lgbm = lgb.train(param,train_data,num_round, verbose_eval=False)
-        self.features_name = pd.Series(lgbm.feature_importance(), index=X_train.columns).sort_values(ascending=False).index.tolist()[:500]
-        self.flag = 1
+        self.model = self.predict + '-' + self.train_names + '-' + str(0)
+        leaves = [450]
+        depth = [6]
+        rate = [0.01]
+        bins = [200]
         
         self.prep()
         y_train = self.y_train
         X_train = self.X_train
         
         train_data = lgb.Dataset(X_train,label=y_train)
-        param = {'num_leaves':random.choice(leaves), 'objective':'binary','max_depth':random.choice(depth),'learning_rate':random.choice(rate),'max_bin':random.choice(bins), 'num_threads':12, 'verbose': -1, 'is_unbalance': True}
-        num_round = 50
+        param = {'num_leaves':random.choice(leaves), 'objective':'binary','max_depth':random.choice(depth),
+                 'learning_rate':random.choice(rate),'max_bin':random.choice(bins),
+                 'num_threads':12, 'verbose': -1, 'is_unbalance': True}
+        num_round = 100
         lgbm = lgb.train(param,train_data,num_round, verbose_eval=False)
         
-        self.feature_imp = pd.Series(lgbm.feature_importance(), index=X_train.columns).sort_values(ascending=False).index.tolist()
+        explainer = shap.TreeExplainer(lgbm)
+        shap_values = explainer.shap_values(self.X_test)
+        values = np.sum(np.abs(shap_values), axis=0)
+        values = np.mean(values, axis=0)
+        df = pd.DataFrame({'features' : self.X_test.columns, 'value' : values}).sort_values(by=['value'], ascending=False)
+        self.feature_imp = df[df['value'] != 0]
+        
         self.parameters = lgbm.params
         self.record()
+        #If plotting wanted
+        # shap.summary_plot(shap_values,self.X_test,max_display=35)
+        # explainer = shap.TreeExplainer(lgbm)
+        # shap_values1 = explainer(self.X_test)
+        # shap_values2 = copy.deepcopy(shap_values1)
+        # shap_values2.values = shap_values2.values[:,:,1]
+        # shap_values2.base_values = shap_values2.base_values[:,1]
+        # shap.plots.beeswarm(shap_values2, max_display=35)
         
     def record(self) :
         rec_features = glob.glob('./data/model_features.{}'.format('csv'))
@@ -211,7 +215,7 @@ class market :
         else : 
             record_features = pd.read_csv('./data/model_features.csv')
         
-        df = pd.DataFrame({self.model : self.feature_imp[:self.n_features]})
+        df = pd.DataFrame({self.model : self.feature_imp['features'].tolist()})
         record_features = pd.concat([record_features, df], axis=1)
         record_features.to_csv('./data/model_features.csv', index = False)
         
@@ -247,7 +251,6 @@ class market :
                                  
     def execute(self) :
         start = datetime.now()
-        self.use_weights = 0
         self.use_stocks()
         self.prep()
         self.make_model()

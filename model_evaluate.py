@@ -188,9 +188,7 @@ class market :
         self.parameters = dict(parameters)
         self.model = model
         self.predict = hold[0]
-        self.use = hold[2:-1]
-        self.n_features = int(float(model.split('-')[1]))
-        self.use_weights = int(float(model.split('-')[2]))
+        self.use = hold[1:-1]
         
     def metric(self,probabilities) :
         
@@ -207,7 +205,7 @@ class market :
             counter += 1
             
     def threshold (self) :
-        level = 70
+        level = 60
         thresholds = np.linspace(0.5, 1, num = 101)
         accuracy = 0
         n = 0
@@ -239,7 +237,7 @@ class market :
     
     def ml_model(self):
         train_data = lgb.Dataset(self.X_train,label=self.y_train)
-        num_round = 10
+        num_round = 100
         self.lgbm = lgb.train(self.parameters,train_data,num_round, verbose_eval=False)
         self.y_probs = self.lgbm.predict(self.X_test)
         
@@ -249,24 +247,6 @@ class market :
                self.y_pred.append(1)
             else :  
                self.y_pred.append(-1)
-               
-    def best_model_purging(self): 
-        record = pd.read_csv('./data/record_model.csv')
-        best_models = glob.glob(os.getcwd() + '/Best_models/*.{}'.format('csv'))
-        n_best_models = len(best_models)
-        Weekly_ROC_AUC = []
-        if n_best_models > 50:
-            for model in best_models :
-                model_search = model.split('/')[-1].replace('.csv','')
-                Weekly_ROC_AUC.append(record[record['Model_name'] == model_search].iloc[-1]['Weekly_ROC_AUC'])
-                
-            quality = pd.DataFrame({'Model':best_models, 'ROC': Weekly_ROC_AUC})
-            quality = quality.sort_values(by=['ROC'], ascending=True)
-            
-            n_to_delete = 5
-            to_delete = quality['Model'].to_list()[:n_to_delete]    
-            for model in to_delete :
-                os.remove(model)
                            
     def test_all(self) :
         
@@ -344,7 +324,7 @@ class market :
             print('Model trade threshold is', np.round(self.model_level_live,2))
             
             n_best_models = len(glob.glob(os.getcwd() + '/Best_models/*.{}'.format('csv')))
-            pass_threshold = 61 + (n_best_models/40)
+            pass_threshold = 60 + (n_best_models/100)
             percent_days = 10/100
             print('\n Using pass threshold of', pass_threshold)
             if  (self.ROC_test > pass_threshold) &  (self.ROC_live > pass_threshold) & \
@@ -376,7 +356,6 @@ class market :
     def execute(self) :
         start = datetime.now()
         self.test_all()
-        #self.best_model_purging()
         stop = datetime.now()
         print('\n Time for model evaluation : ', (stop - start))
 

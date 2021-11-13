@@ -140,27 +140,6 @@ class trade :
 
         return 
     
-    def make_weights(self) :
-        """Class function used to make class weights
-
-        Attributes
-        -----------
-        `self.weights` : list
-            Class weights"
-        """
-        
-        links = pd.read_csv('./data/stock_links.csv')
-        weight = self.price_data_train[['stock','delta']]
-        for stock in self.use :
-            weight['stock'].loc[weight['stock'] == stock] = links[self.predict].loc[links['index'] == stock].values[0] * (2/100)
-        
-        weight['delta'].loc[weight['delta'] > 1] = 2
-        weight['delta'].loc[weight['delta'] < -1] = 2
-        weight['delta'].loc[weight['delta'] != 2] = 1
-        
-        self.weights = weight['delta'] + weight['stock']
-        self.weights = self.weights.tolist()
-    
     def model_prediction(self) :
         """Class function used to make prediction using model (lgbm_light) with paramaters supplied by model caracteristics
 
@@ -175,7 +154,7 @@ class trade :
         X_train = self.X_train
         
         train_data = lgb.Dataset(self.X_train,label=self.y_train, weight=self.weights)
-        num_round = 50
+        num_round = 100
         self.lgbm = lgb.train(self.parameters,train_data,num_round, verbose_eval=False)
         self.prediction = self.lgbm.predict(self.X_test)
         
@@ -213,31 +192,28 @@ class trade :
         for stock in stocks:
             test1, test2 = 0, 0
             data_stock = data[data['Products'] == stock]
-            average_prob = data_stock['Probabilities'].mean()
+            probability = data_stock['Probabilities'][data_stock['Products'] == stock].tolist() 
+            level = data_stock['Model_level'][data_stock['Products'] == stock].tolist()
             
-            if (average_prob > 0.55) or (average_prob < 0.45) :
-                probability = data_stock['Probabilities'][data_stock['Products'] == stock].tolist() 
-                level = data_stock['Model_level'][data_stock['Products'] == stock].tolist()
-                
-                side = np.array([])
-                prob_distance = np.array([])
-                product = np.array([])
-                prob = np.array([])
-                for i in range(len(probability)) :
-                    if (probability[i] > 0.5) & (probability[i] > level[i]):
-                        side = np.append(side, 1)
-                        prob_distance = np.append(prob_distance, probability[i] - level[i])
-                        product = np.append(product, stock)
-                        prob = np.append(prob, probability[i])
-                    if (probability[i] < 0.5) & ((1-probability[i]) > level[i]):
-                        side = np.append(side, -1)
-                        prob_distance = np.append(prob_distance, (1-probability[i]) - level[i])
-                        product = np.append(product, stock)
-                        prob = np.append(prob, probability[i])
-                 
-                df = pd.DataFrame({'Products' : product, 
-                        'Prob_distance': prob_distance, 'Side': side, 'Probability' : prob})
-                to_trade = to_trade.append(df, ignore_index=True)
+            side = np.array([])
+            prob_distance = np.array([])
+            product = np.array([])
+            prob = np.array([])
+            for i in range(len(probability)) :
+                if (probability[i] > 0.5) & (probability[i] > level[i]):
+                    side = np.append(side, 1)
+                    prob_distance = np.append(prob_distance, probability[i] - level[i])
+                    product = np.append(product, stock)
+                    prob = np.append(prob, probability[i])
+                if (probability[i] < 0.5) & ((1-probability[i]) > level[i]):
+                    side = np.append(side, -1)
+                    prob_distance = np.append(prob_distance, (1-probability[i]) - level[i])
+                    product = np.append(product, stock)
+                    prob = np.append(prob, probability[i])
+             
+            df = pd.DataFrame({'Products' : product, 
+                    'Prob_distance': prob_distance, 'Side': side, 'Probability' : prob})
+            to_trade = to_trade.append(df, ignore_index=True)
         
         to_trade['Prob_distance'] = to_trade['Prob_distance']/to_trade['Prob_distance'].sum()
         to_trade.to_csv('./data/to_trade.csv', index = False)
@@ -288,9 +264,7 @@ class trade :
         self.parameters = dict(parameters)
         self.model = model
         self.predict = hold[0]
-        self.use = hold[2:-1]
-        self.n_features = int(float(model.split('-')[1]))
-        self.use_weights = int(float(model.split('-')[2]))
+        self.use = hold[1:-1]
     
     def record (self) :
         """Class function used to record the days trades and outcomes for subsequent statistics, data is pulled from yahoo finance
