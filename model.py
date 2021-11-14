@@ -225,25 +225,25 @@ class market :
     def emails (self) :
         today = datetime.today() - pd.Timedelta("2 days")
         record = pd.read_csv('./data/record_model.csv').dropna()
-        record = record.drop_duplicates(subset=['Model_name'], keep='first')
-        record['Date'] = pd.to_datetime(record['Date'])
-        record = record.loc[(record['Date'] > today)]
+        record = record.drop_duplicates(subset=['model_name'], keep='last')
+        record['date'] = pd.to_datetime(record['date'])
+        record = record.loc[(record['date'] > today)]
         
-        Long_accuracy = np.array(record['Long_accuracy'].tolist())
-        Long_performance = np.array(record['Long_Model_performance'].tolist())
+        accuracy_test = np.array(record['accuracy_test'].tolist())
+        ROC_test = np.array(record['ROC_test'].tolist())
+        trade_accuracy_test = np.array(record['trade_accuracy_test'].tolist())
+        model_performance_test = np.array(record['model_performance_test'].tolist())
         
-        Weekly_ROC = np.array(record['Weekly_ROC_AUC'].tolist())
-        Weekly_accuracy = np.array(record['Weekly_accuracy'].tolist())
+        accuracy_live = np.array(record['accuracy_live'].tolist())
+        ROC_live = np.array(record['ROC_live'].tolist())
+        trade_accuracy_live = np.array(record['trade_accuracy_live'].tolist())
+        model_performance_live = np.array(record['model_performance_live'].tolist())
         
-        Trade_accuracy = np.array(record['Trade_accuracy'].tolist())
-        Weekly_Trade_accuracy = np.array(record['Weekly_Trade_accuracy'].tolist())
-        
-        strong = len(np.where(Weekly_accuracy  > 60)[0])
-        
-        report = pd.DataFrame({'Date' : datetime.today().strftime('%Y - %m - %d'), 'Total_models' : [len(Long_accuracy)],'Strong_models' : [strong], 
-                            'Accuracy_over_100_days': [np.mean(Long_accuracy)], 'Estimated performance_100_days' : [np.mean(Long_performance)], 
-                            'Weekly_accuracy' : [np.mean(Weekly_accuracy)], 'Weekly_ROC' : [np.mean(Weekly_ROC)], 
-                            'Weekly_traded_accuracy': [np.mean(Weekly_Trade_accuracy)]})
+        report = pd.DataFrame({'date':[datetime.today().strftime('%Y - %m - %d')],
+                            'accuracy_test' : [np.round(np.mean(accuracy_test),2)], 'ROC_test': [np.round(np.mean(ROC_test),2)], 
+                            'trade_accuracy_test' : [np.round(np.mean(trade_accuracy_test),2)], 'model_performance_test' : [np.round(np.mean(model_performance_test),2)], 
+                            'accuracy_live' : [np.round(np.mean(accuracy_live),2)], 'ROC_live': [np.round(np.mean(ROC_live),2)], 
+                            'trade_accuracy_live' : [np.round(np.mean(trade_accuracy_live),2)], 'model_performance_live' : [np.round(np.mean(model_performance_live),2)]})
         
         report.to_csv('./data/model_report.csv', index = False)
         send_report()

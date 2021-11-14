@@ -92,7 +92,7 @@ class market :
         price_data['Date'] = pd.to_datetime(price_data['Date']) 
         dates = price_data['Date']
         dates = dates.drop_duplicates()
-        dates = dates.iloc[100:]
+        #dates = dates.iloc[100:]
         today = dates.iloc[0]
         last_date = dates.iloc[5*(self.live) + 1*(self.test>0)*(105 + 5*self.test)]
         first_date = dates.iloc[1*(self.live>0)*5*(self.live+1) + 1*(self.test>0)*(105 + 5*(self.test+1))] # We chose 200 as upper limit

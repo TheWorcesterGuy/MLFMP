@@ -11,8 +11,10 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import pandas as pd
 import numpy as np
+from features_report import *
 
 def main():
+    features_report()
     send_report()
 
 def send_report():
@@ -27,9 +29,27 @@ def send_report():
     message["From"] = sender_email
     
     
-    def table() :
+    def table_model_report() :
         table = pd.read_csv('./data/model_report.csv').dropna()
-        table = table.set_index('Date')
+        table = table.set_index('date')
+        html_table = table.to_html()
+        return html_table
+    
+        
+    def table_top() :
+        table = pd.read_csv('./data/Top.csv')
+        table = table.set_index('Features')
+        html_table = table.to_html()
+        return html_table
+    
+    def table_bottom() :
+        table = pd.read_csv('./data/Bottom.csv')
+        table = table.set_index('Features')
+        html_table = table.to_html()
+        return html_table
+    
+    def table_features_not_used() :
+        table = pd.read_csv('./data/features_not_used.csv')
         html_table = table.to_html()
         return html_table
     
@@ -48,15 +68,13 @@ def send_report():
       <body>
         <p><b>Model quality update,</b><br>
         <br>
-           The last day's overall model quality of new models can be found in the subsequent table.<br>
+           The last day's overall quality of new models can be found in the subsequent table as well as the feature usage. <br>
            <br>
-           <b>- Total_models :</b> Corresponds to the total number of new models evaluated <br>
-           <b>- Strong_models :</b> Corresponds to the number of models with a traded accuracy above 0.58  <br>
-           <b>- Accuracy_over_100_days :</b> Corresponds to the average accuracy  over 100 days <br>
-           <b>- Estimated performance_100_days :</b> Corresponds to the estimated average market performance over 100 days<br>
-           <b>- Weekly_accuracy :</b> Correpsonds to the average weekly accuracy estimated for 150 days (trained/tested week by week) <br>
-           <b>- Weekly_ROC :</b> Corresponds to the average weekly ROC_AUC estimated for 150 days (trained/tested week by week) <br>
-           <b>- Weekly_traded_accuracy :</b> Corresponds to the weekly traded accuracy where trades are only considered if they have a probability above 0.55 <br>
+           <b>- Test :</b> Corresponds to the the average metrics aquired during the model testing <br>
+           <b>- Live :</b> Corresponds to the average metrics aquired during the simulated live trading  <br>
+           <b>- Second table :</b> Gives the frequency (in %) of appearance of features in the top 10 used features  <br>
+           <b>- Third table :</b> Gives the frequency (in %) of appearance of features in the bottom 10 used features  <br>
+           <b>- Fouth table :</b> Gives the features unused  <br>
            <br>
            Kind regards, <br>
            <b> Wilkinson & Chabannes Trading © </b> <br>
@@ -65,7 +83,7 @@ def send_report():
         </p>
       </body>
     </html>
-    """ + table()
+    """  + table_model_report() + table_top() + table_bottom() + table_features_not_used()
     
     
     # Turn these into plain/html MIMEText objects
