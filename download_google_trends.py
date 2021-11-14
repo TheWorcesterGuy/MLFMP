@@ -19,7 +19,8 @@ from pathlib import Path
 
 def main():
 
-    waiting_time = 30
+    waiting_time = 25
+    n_days = 14
 
     # Check if Google Trend update is allowed
     check_update_validity()
@@ -27,6 +28,9 @@ def main():
     google_trends = ['facebook stock', 'SPY', 'AMD', 'AAPL', 'AMZN', 'QQQ', 'TSLA', 'MSFT', 'boeing stock',
                      'INTC', 'DIS', 'JPM', 'WMT', 'NFLX', 'GOOG', 'GOOGL', 'NVDA', 'TWTR',
                      'debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk']
+                     
+    if os.path.isfile('./data/temp_data.csv'):
+        os.system('rm ./data/temp_data.csv')
 
     default_dir = os.getcwd()
 
@@ -56,14 +60,14 @@ def main():
 
         while last_file_saved is False:
 
-            if start_date + pd.DateOffset(days=30) > final_date:
+            if start_date + pd.DateOffset(days=n_days) > final_date:
                 next_date = final_date + pd.DateOffset(days=1)
-                start_date = final_date - pd.DateOffset(days=30)
+                start_date = final_date - pd.DateOffset(days=n_days)
                 filename = './data/GOOGLE_TRENDS/%s/current_file.csv' % google_trend
                 last_file = True
 
             else:
-                next_date = start_date + pd.DateOffset(days=30)
+                next_date = start_date + pd.DateOffset(days=n_days)
                 filename = 'data/GOOGLE_TRENDS/%s/Google_Trends_%s_week_%s.csv' % (google_trend, next_date.year, next_date.week)
                 last_file = False
 
@@ -88,9 +92,9 @@ def main():
             df['date'] = pd.to_datetime(df['date'])
             df = df[df['date'] < datetime.now(pytz.timezone('US/Eastern')) - pd.Timedelta(hours=1)]
 
+            print('Last row downloaded : ', df.tail(1))
+
             df.to_csv(filename, index=False)
-            df['date'] = pd.to_datetime(df['date'])
-            df['date'] = pd.to_datetime(df['date'])
             start_date = df['date'].max()
 
             os.system('rm data/temp_data.csv')
@@ -128,7 +132,8 @@ def main():
                     df_year_month.to_csv('data/GOOGLE_TRENDS/%s/Google_Trends_%s_%s.csv' % (google_trend, year, month),
                                         index=False)
 
-        print('Done downloading Google Trends for %s.' % google_trend)
+        #print('Done downloading Google Trends for %s.\n\n' % google_trend)
+        print('\n\n')
 
     with open('data/history_google_updates.csv', 'a') as fd:
         fd.write(pd.Timestamp.now(tz='US/Eastern').strftime('%Y-%m-%d') + '\n')
@@ -150,8 +155,7 @@ def check_update_validity():
         exit(0)
 
     # if during_week_days
-
-    if pd.to_datetime(datetime.now(pytz.timezone('US/Eastern')).date()).dayofweek < 5:
+    if pd.to_datetime(datetime.now().date()).dayofweek < 5:
         # get current date
         hour = pd.Timestamp.now(tz='US/Eastern').hour
         minute = pd.Timestamp.now(tz='US/Eastern').minute

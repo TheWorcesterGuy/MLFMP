@@ -26,6 +26,7 @@ import warnings
 import pytz
 from email_updates_error import *
 from email_updates_model_report import *
+from features_report import *
 import shap
 import copy
 warnings.filterwarnings("ignore")
@@ -36,7 +37,7 @@ def main():
     date_sent = nyc_datetime - pd.Timedelta("1 days")
     for j in range(0,1000):
         maker = 0
-        if j == -1 :
+        if j == 0 :
             maker = 1
             market(maker).stock_matrix()
             maker = 0
@@ -47,18 +48,19 @@ def main():
         end = nyc_datetime.replace(hour=17, minute=30, second=0,microsecond=0)
         if (nyc_datetime > start) & (nyc_datetime < end) & (nyc_datetime.date() > date_sent.date()) :
             print('\nSending email update on model quality\n')
+            features_report()
             market(maker).emails()
             date_sent = nyc_datetime
             print('Completed\n')
         
-        for k in range (0,1):
+        for k in range (0,10):
             market(maker).execute()
                 
         os.system("python model_evaluate.py")
         
 class market :
     def __init__(self, maker) :
-        #self.verify_features_store()
+        self.verify_features_store()
         self.possibilities =  ['INTC', 'AMZN', 'FB', 'AAPL', 'DIS', 'TSLA', 'GOOG', 'GOOGL', 
                                'MSFT', 'NFLX', 'NVDA', 'BA', 'TWTR', 'AMD', 'WMT', 'JPM', 'SPY', 'QQQ', 'BAC', 'JNJ', 'PG', 'NKE' ]
         self.path = os.getcwd()
@@ -66,16 +68,17 @@ class market :
         self.predict = random.sample(self.possibilities, 1)[0]
         self.use_n = random.randint(1, 10)
         self.price_data = pd.read_csv('./data/features_store.csv',',')
+        self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.9)).dropna()
         self.all = glob.glob(os.getcwd() + '/models/*.{}'.format('csv'))
         self.flag = 0
         self.maker = maker
         
-        # Halt during pre-trading times
-        # nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-        # start = nyc_datetime.replace(hour=7, minute=20, second=0,microsecond=0)
-        # end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
-        # if (nyc_datetime > start) & (nyc_datetime < end) :
-        #     time.sleep(3600)
+        #Halt during pre-trading times
+        nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+        start = nyc_datetime.replace(hour=7, minute=20, second=0,microsecond=0)
+        end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
+        if (nyc_datetime > start) & (nyc_datetime < end) :
+            time.sleep(3600)
        
     def stock_matrix(self) :
         print('\nMaking stock links matrix\n')
@@ -105,7 +108,7 @@ class market :
         price_data = pd.read_csv('./data/features_store.csv',',')
         price_data['Date'] = pd.to_datetime(price_data['Date'])
         today = datetime.today()
-        if price_data['Date'].iloc[0] < today - timedelta(days=50) :
+        if price_data['Date'].iloc[0] < today - timedelta(days=5) :
             error_message = "The features store has not been updated for ten or more days, this is evaluated as a fatal error as it can lead to incorrect models, please update features store"
             self.error_handling(error_message)
             

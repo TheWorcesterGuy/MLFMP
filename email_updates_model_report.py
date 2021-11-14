@@ -14,7 +14,6 @@ import numpy as np
 from features_report import *
 
 def main():
-    features_report()
     send_report()
 
 def send_report():

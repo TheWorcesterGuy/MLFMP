@@ -68,7 +68,7 @@ def trade_system():
                 print('\n Sleeping before google update', round((difference.seconds/60)/60,3), 'hours\n')
                 time.sleep(difference.seconds+1)
                 print('\n updating features store for google \n')
-                os.system("python update_features_store.py")
+                os.system("python3 update_features_store.py >> ./log/first" + nyc_datetime.strftime('%Y-%m-%d') + ".txt")
                 nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
                 start = nyc_datetime.replace(hour=8, minute=35, second=1,microsecond=0)
                 difference = start - nyc_datetime
@@ -86,8 +86,8 @@ def trade_system():
             start = nyc_datetime.replace(hour=8, minute=35, second=0,microsecond=0)
             end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
             if (nyc_datetime >= start) & (nyc_datetime < end) :
-                os.system("python update_features_store.py")
-                os.system('python trade.py')
+                os.system("python3 update_features_store.py >> ./log/second" + nyc_datetime.strftime('%Y-%m-%d') + ".txt")
+                os.system("python3 trade.py >> ./log/trade_log" + nyc_datetime.strftime('%Y-%m-%d') + ".txt")
 
             nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
             if (nyc_datetime.weekday() == 4):

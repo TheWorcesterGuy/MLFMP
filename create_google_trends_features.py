@@ -36,9 +36,13 @@ else:
     print('Error : empty folder for %s' % google_trend)
     exit(0)
 
-# remove holidays and weekends
+# Google trends after 7:00 am (NY time) included are considered for the next day (the new midnight is 7:00 am)
 df['date'] = df['date'].apply(lambda x: x.replace(tzinfo=None))
 df['date'] = pd.to_datetime(df['date'])
+df.loc[df['date'].dt.hour >= 7, 'date'] += pd.Timedelta(hours=18)
+
+
+# remove holidays and weekends
 df = df[df.date.dt.dayofweek < 5]
 
 final_date = datetime.today()
@@ -46,7 +50,8 @@ holidays = calendar().holidays(start='2000-01-01', end='%s-%s-%s' %(final_date.y
 m = df['date'].isin(holidays)
 df = df[~m].copy()
 
-# Create a time series with all timestamp expect weekends & holidays (used to detected missing records in Google trends
+
+# Create a time series with all timestamp expect weekends & holidays (used to detected missing records in Google trends)
 time = pd.DataFrame(pd.date_range(df['date'].min(), df['date'].max(), freq='H').values,
                     columns=['date'])
 m = time['date'].isin(holidays)
@@ -55,13 +60,11 @@ time = time[time.date.dt.dayofweek < 5]
 
 df = df.merge(time['date'], on='date', how='outer').sort_values('date', ascending=False)
 
+
 # Replace missing values and zeros values by nans
 for col in df.columns[1:]:
     df.loc[(df[col].isna()) | (df[col] == 0), col] = np.nan
 
-# Google trends after 7:00 am (NY time) included are considered for the next day (the new midnight is 7:00 am)
-df['date'] = pd.to_datetime(df['date'])
-df.loc[df['date'].dt.hour >= 7, 'date'] += pd.Timedelta(hours=18)
 
 # Replace 0s by -0.1 (so that whole days of zeros are negative but punctual zeros don't have any impact)
 df.loc[df[google_trend] == 0, google_trend] = -0.1
@@ -69,6 +72,7 @@ df.loc[df[google_trend] == 0, google_trend] = -0.1
 # Average Google trends daily
 df['date'] = df['date'].dt.date
 df = df.groupby('date', as_index=False).mean()
+
 
 # Rename stock names with generic name 'stock'
 for col in df.columns:
@@ -78,7 +82,7 @@ for col in df.columns:
 
 # Create delta features
 for col in df.columns[1:]:
-    print(col)
+
     df['GT_%s_delta1' % col] = (df[col] - df[col].shift(1)) / (df[col].shift(1) + 1)
     df['GT_%s_delta2' % col] = (df[col] - df[col].shift(2)) / (df[col].shift(2) + 1)
     df['GT_%s_delta3' % col] = (df[col] - df[col].shift(3)) / (df[col].shift(3) + 1)
@@ -87,10 +91,11 @@ for col in df.columns[1:]:
     df['GT_%s_delta2_smooth' % col] = (df[col].shift(2) + df[col].shift(3)) / (df[col].shift(4) + df[col].shift(5) + 1)
     df['GT_%s' % col] = df[col]
     del df[col]
-    print(df)
+    
 
 # Drop first nans due to shifts:
 df = df.rename(columns={'date': 'Date'})
+
 
 # save encoded features
 if os.path.isdir('./data/GOOGLE_TRENDS/%s/encoded_data' % google_trend) is False:

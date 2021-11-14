@@ -38,13 +38,13 @@ class market :
         self.verify_features_store()
         self.path = os.getcwd()
         self.price_data = pd.read_csv('./data/features_store.csv',',')
-        
-        # Halt during pre-trading times
-        # nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-        # start = nyc_datetime.replace(hour=7, minute=20, second=0,microsecond=0)
-        # end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
-        # if (nyc_datetime > start) & (nyc_datetime < end) :
-        #     time.sleep(5400)
+        self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.9)).dropna()
+        #Halt during pre-trading times
+        nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+        start = nyc_datetime.replace(hour=7, minute=20, second=0,microsecond=0)
+        end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
+        if (nyc_datetime > start) & (nyc_datetime < end) :
+            time.sleep(5400)
         
     def error_handling(self, error_message) :
         today = datetime.today()
@@ -324,7 +324,7 @@ class market :
             print('Model trade threshold is', np.round(self.model_level_live,2))
             
             n_best_models = len(glob.glob(os.getcwd() + '/Best_models/*.{}'.format('csv')))
-            pass_threshold = 60 + (n_best_models/100)
+            pass_threshold = 55 + (n_best_models/20)
             percent_days = 10/100
             print('\n Using pass threshold of', pass_threshold)
             if  (self.ROC_test > pass_threshold) &  (self.ROC_live > pass_threshold) & \

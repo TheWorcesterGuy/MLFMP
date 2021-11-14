@@ -42,6 +42,7 @@ class trade :
         self.verify_features_store()
         files = glob.glob('*.{}'.format('csv'))
         self.price_data = pd.read_csv('./data/features_store.csv',',')
+        self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.9)).dropna()
         self.path = os.getcwd()
         data = pd.DataFrame({'Date' : [], 'Products' : [], 
                     'Probabilities': [], 'Model_level': []})
@@ -74,11 +75,11 @@ class trade :
         `self.error_handling()` : Function call
             Class function to deal with a raised error"
         """
-        price_data = pd.read_csv('./data/features_store.csv',',')
+        price_data = pd.read_csv('./data/features_store.csv',',').dropna()
         price_data['Date'] = pd.to_datetime(price_data['Date'])
         today = datetime.today()
         if price_data['Date'].iloc[0] < today :
-            error_message = "The features store has not been updated until todays date, this is evaluated as a fatal error as it can lead to incorrect predictions"
+            error_message = "The features store has not been updated until todays date or there is missing data, this is evaluated as a fatal error as it can lead to incorrect predictions"
             self.error_handling(error_message)
     
     def cp_models(self) :
@@ -123,6 +124,7 @@ class trade :
         use = self.use 
         price_data['Date'] = pd.to_datetime(price_data['Date']) # Convert date column to datetime format for subsequent date selection 
         today = self.price_data['Date'].iloc[0] # Extract last date in features store, which sould correspond to todays date                     
+        
         self.price_data_train = price_data[price_data['stock'].isin(use)].loc[(price_data['Date'] < today)]    
         price_data_test = price_data[price_data['stock'] == self.predict].loc[(price_data['Date'] >= today)] # Extract data for stock to be predicted
         

@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sat Sep 18 20:43:27 2021
-
 @author: christian
 """
 
@@ -78,5 +77,3 @@ def get_price(ticker, start_date):
 if __name__ == "__main__":
     main()
     
-
-

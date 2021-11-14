@@ -16,6 +16,9 @@ def clean() :
     if len(glob.glob('Best_models')) :
         os.system('rm -r Best_models')
         
+    if len(glob.glob('./models_in_use')) :
+        os.system('rm -r ./models_in_use')
+        
     if len(glob.glob('./data/model_report.csv')) :
         os.system('rm ./data/model_report.csv')
         
@@ -46,3 +49,4 @@ def make() :
     os.system('mkdir ./models')
     os.system('mkdir ./Best_models')
     os.system('mkdir ./models_in_use')
+    os.system('touch ./data/history_google_updates.csv')

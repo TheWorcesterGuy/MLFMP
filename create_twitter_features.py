@@ -347,6 +347,8 @@ def create_derived_features(df):
     df['delta_dev_stock4'] = df['delta_stock3'] - df['delta_stock4']
     df['delta_dev_stock5'] = df['delta_stock4'] - df['delta_stock5']
     df['delta_dev_stock6'] = df['delta_stock5'] - df['delta_stock6']
+    
+    print(df.tail(1))
 
     return df
 

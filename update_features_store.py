@@ -16,6 +16,9 @@ warnings.simplefilter(action='ignore')
 
 def main():
 
+    update_date = datetime.today().strftime('%Y-%m-%d')
+    print('UPDATE DATE : %s\n\n' % update_date)
+
 
     stocks = ['INTC', 'TSLA',  'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA', 'BA',
               'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'JNJ', 'PG', 'NKE']
@@ -45,7 +48,6 @@ def main():
     apply_parallel_command(6, "./download_tweets.py", stocks)
     apply_parallel_command(6, "./encode_tweets.py", stocks)
 
-
     # get twitter features
     apply_parallel_command(3, "./create_twitter_features.py", stocks)
 
@@ -64,7 +66,9 @@ def main():
     print('\n Time to update trade features: ', (stop_trade - stop_google_trends))
     print('\n Time to update twitter features: ', (stop - stop_trade))
     print('\n Time to update features: ', (stop - start))
-
+    print('\nLast row added:', df.head(1))
+    print('\nEND UPDATE DATE\n\n\n\n')
+    
 
 def apply_parallel_command(max_processes, command, list_argument, env_path=None):
 
@@ -104,7 +108,7 @@ def merge_files(stocks):
             df_merged = reduce(lambda left, right: pd.merge(left, right, on=['Date'],
                                                             how='inner'), [df_price, df_twitter, df_trend])
             df_list.append(df_merged)
-            #os.system(" rm './data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv'" % (stock, stock))
+            os.system(" rm './data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv'" % (stock, stock))
         else:
             df_merged = df_price.merge(df_twitter, on='Date', how='inner')
             df_list.append(df_merged)
@@ -123,7 +127,7 @@ def merge_files(stocks):
     if os.path.exists('./data/GOOGLE_TRENDS/mood_features_g.csv'):
         df_mood_trend = pd.read_csv('./data/GOOGLE_TRENDS/mood_features_g.csv')
         df = df.merge(df_mood_trend, on='Date', how='inner')
-        #os.system('rm /data/GOOGLE_TRENDS/mood_features_g.csv')
+        os.system('rm /data/GOOGLE_TRENDS/mood_features_g.csv')
 
     df = df.sort_values('Date', ascending=False)
 

@@ -21,7 +21,6 @@ import glob
 import random
 warnings.simplefilter(action='ignore')
 
-
 def main():
     print('\n Creating price & econometric features for %s ...' % sys.argv[1])
     features(symbol = sys.argv[1]).execute()
@@ -85,6 +84,7 @@ class features:
         
         self.price_data = price_data
 
+        print(price_data.tail(1))
          
         return 
     
