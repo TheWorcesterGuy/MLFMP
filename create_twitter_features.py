@@ -31,19 +31,20 @@ def main():
                   glob.glob("data/TWITTER_DATA/%s/encoded_data/*encoded*.csv" % stock)]
     df = pd.concat(list_files, axis=0)
 
-    # convert UTC time to NY time and save tweets after 7:59 NY time for next day
+    # convert UTC time to NY time and save tweets after 8:35 NY time for next day
     df = fix_tweet_timing(df)
 
     # aggregate tweets
     df = aggregate_tweets(df)
 
+    # add stock market prices
+    df = df.merge(df_stock, on='Date', how='outer')
+    
     # create stock market name column
     df['stock'] = stock
 
-    # add stock market prices
-    df = df.merge(df_stock, on='Date', how='outer')
 
-    # average feature cross weekends and holidays
+    # average features across weekends and holidays
     df = average_sentiment_holidays(df)
 
     # create derived features
@@ -110,7 +111,7 @@ def fix_tweet_timing(df):
     cond1 = df['Datetime'].dt.hour > 8
     cond2 = (df['Datetime'].dt.hour == 8) & (df['Datetime'].dt.minute > 35)
 
-    # tweets after 7:59 am NY time are saved for next day
+    # tweets after 8:35 am NY time are saved for next day
     df.loc[cond1 | cond2, 'Datetime'] += pd.Timedelta(hours=12)
 
     df['Date'] = pd.to_datetime(df['Datetime'].dt.date, errors='coerce')
