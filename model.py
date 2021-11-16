@@ -37,7 +37,7 @@ def main():
     date_sent = nyc_datetime - pd.Timedelta("1 days")
     for j in range(0,1000):
         maker = 0
-        if j == 0 :
+        if j == -10 :
             maker = 1
             market(maker).stock_matrix()
             maker = 0
@@ -49,6 +49,7 @@ def main():
         if (nyc_datetime > start) & (nyc_datetime < end) & (nyc_datetime.date() > date_sent.date()) :
             print('\nSending email update on model quality\n')
             features_report()
+            top_50()
             market(maker).emails()
             date_sent = nyc_datetime
             print('Completed\n')
@@ -78,6 +79,7 @@ class market :
         start = nyc_datetime.replace(hour=7, minute=20, second=0,microsecond=0)
         end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
         if (nyc_datetime > start) & (nyc_datetime < end) :
+            os.system('rm ./data/stock_links.csv')
             time.sleep(3600)
        
     def stock_matrix(self) :

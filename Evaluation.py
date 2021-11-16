@@ -41,6 +41,9 @@ class evaluation :
         record = pd.read_csv('./data/record_model.csv').dropna()
         record = record.drop_duplicates(subset=['model_name'], keep='last')
         record['date'] = pd.to_datetime(record['date'])
+        today = datetime.now()
+        recent = today - timedelta(days=1)
+        record = record[record['date'] > recent]
         self.record = record.dropna()
         
     def charts (self):
@@ -51,10 +54,10 @@ class evaluation :
         record = record[record['days_traded_test'] > int(150*percentage_days)]
         record = record[record['days_traded_live'] > int(100*percentage_days)]
         
-        #record = record[record['status'] > 0]
-        accuracy_test = sorted(record['trade_accuracy_test'].to_list())[:-10]
+        record = record[record['status'] > 0]
+        accuracy_test = sorted(record['trade_accuracy_test'].to_list())#[:-5]
         accuracy_live = record['trade_accuracy_live'].to_list()
-        ROC_live = sorted(record['ROC_test'].to_list())[:-10]
+        ROC_live = sorted(record['ROC_test'].to_list())#[:-5]
         
         mean_live_thr = []
         mean_live_perf = []

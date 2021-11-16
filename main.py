@@ -68,7 +68,7 @@ def trade_system():
                 print('\n Sleeping before google update', round((difference.seconds/60)/60,3), 'hours\n')
                 time.sleep(difference.seconds+1)
                 print('\n updating features store for google \n')
-                os.system("python3 update_features_store.py >> ./log/first" + nyc_datetime.strftime('%Y-%m-%d') + ".txt")
+                os.system("python3 update_features_store.py")
                 nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
                 start = nyc_datetime.replace(hour=8, minute=35, second=1,microsecond=0)
                 difference = start - nyc_datetime
@@ -76,7 +76,7 @@ def trade_system():
                 time.sleep(difference.seconds+1)
                 
             elif (nyc_datetime > end):
-                start = (nyc_datetime + timedelta(days=1)).replace(hour=7, minute=21, second=0,microsecond=0)
+                start = (nyc_datetime + timedelta(days=1)).replace(hour=7, minute=20, second=0,microsecond=0)
                 nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
                 difference = start - nyc_datetime
                 print('\n Sleeping', round((difference.seconds/60)/60,3), 'hours\n')
@@ -86,8 +86,9 @@ def trade_system():
             start = nyc_datetime.replace(hour=8, minute=35, second=0,microsecond=0)
             end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
             if (nyc_datetime >= start) & (nyc_datetime < end) :
-                os.system("python3 update_features_store.py >> ./log/second" + nyc_datetime.strftime('%Y-%m-%d') + ".txt")
-                os.system("python3 trade.py >> ./log/trade_log" + nyc_datetime.strftime('%Y-%m-%d') + ".txt")
+                #os.system("python3 update_features_store.py")
+                #os.system("python3 reporting_features_store.py")
+                os.system("python3 trade.py > ./log/trade_log" + nyc_datetime.strftime('%Y-%m-%d') + ".txt")
 
             nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
             if (nyc_datetime.weekday() == 4):

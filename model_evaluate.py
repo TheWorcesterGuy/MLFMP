@@ -71,7 +71,7 @@ class market :
         
     def files (self) :
         self.all = glob.glob(os.getcwd() + '/models/*.{}'.format('csv'))
-        
+        random.shuffle(self.all)
         dir = os.getcwd() + '/Best_models'
         filelist = glob.glob(os.path.join(dir, "*"))
         

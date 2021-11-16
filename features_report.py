@@ -78,3 +78,33 @@ def features_report() :
     
     features_not_used = pd.DataFrame({'Features Not Used':features_not_used})
     features_not_used.to_csv('./data/features_not_used.csv', index=False)
+    
+def top_50():
+    features = pd.read_csv('./data/model_features.csv')
+    price_data = pd.read_csv('./data/features_store.csv',',')
+    features_present_top = []
+    features_present_bottom = []
+    
+    max_line = 50
+    
+    #Top
+    for ii in range(0,max_line) :
+        features_present_top += features.iloc[ii].tolist()
+    
+    features_present_top = list(set(features_present_top))
+    df = pd.DataFrame({'Features':features_present_top})
+    
+    for ii in range(0,max_line) :
+        percentage_top = []
+        line = features.iloc[ii].tolist()
+        for feature in features_present_top:
+            percentage_top.append(np.round(100*line.count(feature)/len(line),1))
+        
+        df['Top '+str(ii+1)] = percentage_top
+        
+    df = df.reset_index(drop=True)
+    df = df.set_index(['Features'])
+    Top = df.sort_values(by='Top 1', ascending=False)
+    print(Top.head(50))
+    Top.head(50).to_csv('./data/top_50.csv')
+    

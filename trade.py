@@ -39,10 +39,9 @@ class trade :
             Get current working folder path.
         """
         
-        self.verify_features_store()
+        #self.verify_features_store()
         files = glob.glob('*.{}'.format('csv'))
-        self.price_data = pd.read_csv('./data/features_store.csv',',')
-        self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.9)).dropna()
+        self.price_data = pd.read_csv('./data/features_store.csv',error_bad_lines=False)
         self.path = os.getcwd()
         data = pd.DataFrame({'Date' : [], 'Products' : [], 
                     'Probabilities': [], 'Model_level': []})
@@ -75,12 +74,12 @@ class trade :
         `self.error_handling()` : Function call
             Class function to deal with a raised error"
         """
-        price_data = pd.read_csv('./data/features_store.csv',',').dropna()
-        price_data['Date'] = pd.to_datetime(price_data['Date'])
-        today = datetime.today()
-        if price_data['Date'].iloc[0] < today :
-            error_message = "The features store has not been updated until todays date or there is missing data, this is evaluated as a fatal error as it can lead to incorrect predictions"
-            self.error_handling(error_message)
+        # price_data = pd.read_csv('./data/features_store.csv',',')
+        # price_data['Date'] = pd.to_datetime(price_data['Date'])
+        # today = datetime.today()
+        # if price_data['Date'].iloc[0] < today.date() :
+        #     error_message = "The features store has not been updated until todays date or there is missing data, this is evaluated as a fatal error as it can lead to incorrect predictions"
+        #     self.error_handling(error_message)
     
     def cp_models(self) :
         """Class function used to copy best models from './Best_models' to './models_in_use'. This is to avoid conflict between model test and model usage
@@ -129,11 +128,6 @@ class trade :
         price_data_test = price_data[price_data['stock'] == self.predict].loc[(price_data['Date'] >= today)] # Extract data for stock to be predicted
         
         self.y_train = self.price_data_train['delta_class'].tolist() # Extract all outcomes for training
-        
-        if self.use_weights == 1 :
-            self.make_weights()
-        else :   
-            self.weights = np.ones(len(self.y_train))
             
         self.features_name = record[self.model.replace(".csv", "")].dropna().tolist() 
         self.features_name = [x for x in self.features_name if x in price_data.columns] # Account for potential feature store modifications, WARNING this can lead weaker predictions
@@ -155,7 +149,7 @@ class trade :
         y_train = self.y_train
         X_train = self.X_train
         
-        train_data = lgb.Dataset(self.X_train,label=self.y_train, weight=self.weights)
+        train_data = lgb.Dataset(self.X_train,label=self.y_train)
         num_round = 100
         self.lgbm = lgb.train(self.parameters,train_data,num_round, verbose_eval=False)
         self.prediction = self.lgbm.predict(self.X_test)
@@ -233,9 +227,9 @@ class trade :
         
         model = model.replace(".csv", "")
         record = pd.read_csv('./data/record_model.csv')
-        record = record.drop_duplicates(subset=['Model_name'], keep='last')
-        record = record[record['Model_name'] == model]
-        self.model_level = record['Model_level'].iloc[0]
+        record = record.drop_duplicates(subset=['model_name'], keep='last')
+        record = record[record['model_name'] == model]
+        self.model_level = record['model_level_live'].iloc[0]
 
     def layout(self, model) :
         """Class function used to load the model in use parameters from the model csv
