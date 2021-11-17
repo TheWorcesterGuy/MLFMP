@@ -19,7 +19,6 @@ stock = sys.argv[1]
 
 def main():
 
-
     print('Creating Twitter features for %s...' % stock)
     # load yahoo stock prices
     df_stock = yf.download(stock, start='2016-01-01', end='3000-12-31', progress=False).reset_index(drop=False)[['Date', 'Close', 'Open']]
@@ -30,6 +29,11 @@ def main():
                                                           'compound', 'LM_score']] for file in
                   glob.glob("data/TWITTER_DATA/%s/encoded_data/*encoded*.csv" % stock)]
     df = pd.concat(list_files, axis=0)
+
+    # convert UTC to NY time and drop tweets during holidays / weekends
+    # convert df to NY time
+    # create a date column and left join df on df_stock
+    # drop columns with nans on df_stock val except if date is today
 
     # convert UTC time to NY time and save tweets after 8:35 NY time for next day
     df = fix_tweet_timing(df)
@@ -43,9 +47,8 @@ def main():
     # create stock market name column
     df['stock'] = stock
 
-
     # average features across weekends and holidays
-    df = average_sentiment_holidays(df)
+    #df = average_sentiment_holidays(df)
 
     # create derived features
     df = create_derived_features(df)
