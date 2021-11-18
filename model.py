@@ -190,7 +190,7 @@ class market :
         train_data = lgb.Dataset(X_train,label=y_train)
         param = {'num_leaves':random.choice(leaves), 'objective':'binary','max_depth':random.choice(depth),
                  'learning_rate':random.choice(rate),'max_bin':random.choice(bins),
-                 'num_threads':12, 'verbose': -1, 'is_unbalance': True}
+                 'num_threads':10, 'verbose': -1, 'is_unbalance': True}
         num_round = 100
         lgbm = lgb.train(param,train_data,num_round, verbose_eval=False)
         

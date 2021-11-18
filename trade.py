@@ -18,6 +18,7 @@ import yfinance as yf
 import shutil
 import xgboost as xgb
 import lightgbm as lgb 
+import pytz
 from xgboost.sklearn import XGBClassifier
 from email_updates_error import *
 warnings.simplefilter(action = 'ignore')
@@ -74,12 +75,12 @@ class trade :
         `self.error_handling()` : Function call
             Class function to deal with a raised error"
         """
-        # price_data = pd.read_csv('./data/features_store.csv',',')
-        # price_data['Date'] = pd.to_datetime(price_data['Date'])
-        # today = datetime.today()
-        # if price_data['Date'].iloc[0] < today.date() :
-        #     error_message = "The features store has not been updated until todays date or there is missing data, this is evaluated as a fatal error as it can lead to incorrect predictions"
-        #     self.error_handling(error_message)
+        price_data = pd.read_csv('./data/features_store.csv',',')
+        price_data['Date'] = pd.to_datetime(price_data['Date'])
+        today = datetime.today()
+        if price_data['Date'].iloc[0] < today.date() :
+            error_message = "The features store has not been updated until todays date or there is missing data, this is evaluated as a fatal error as it can lead to incorrect predictions"
+            self.error_handling(error_message)
     
     def cp_models(self) :
         """Class function used to copy best models from './Best_models' to './models_in_use'. This is to avoid conflict between model test and model usage
@@ -229,7 +230,7 @@ class trade :
         record = pd.read_csv('./data/record_model.csv')
         record = record.drop_duplicates(subset=['model_name'], keep='last')
         record = record[record['model_name'] == model]
-        self.model_level = record['model_level_live'].iloc[0]
+        self.model_level = np.round(0.5*(record['model_level_live'].iloc[0] + record['model_level_test'].iloc[0]),2)
 
     def layout(self, model) :
         """Class function used to load the model in use parameters from the model csv
@@ -266,9 +267,26 @@ class trade :
         """Class function used to record the days trades and outcomes for subsequent statistics, data is pulled from yahoo finance
 
         """
+        if not len(glob.glob('./data/record_traded.csv')):
+            record = pd.DataFrame({'Date' : [], 
+                        'Traded': [], 'predictions': [],
+                        'outcome': [], 'Delta': [], 'Probability': [], 
+                        'Prob_distance': []})   
+            record.to_csv('./data/record_traded.csv', index = False)
+            
+        if not len(glob.glob('./data/record_all_predictions.csv')):
+            record = pd.DataFrame({'Date' : [], 
+                        'Traded': [], 'predictions': [],
+                        'outcome': [], 'Delta': [], 'Probability': []})  
+            record.to_csv('./data/record_all_predictions.csv', index = False)
         
+        if not len(glob.glob('./data/account.csv')):
+            account = pd.DataFrame({'Date' : [], 'AM' : [], 'PM' : [], 
+                                    'Trade_value' : [], 'Change_account_%' : []})
+            account.to_csv('./data/account.csv', index = False) 
+            
         today = datetime.today()
-        record = pd.read_csv('./data/record_traded.csv')
+        record_traded = pd.read_csv('./data/record_traded.csv')
         traded = pd.read_csv('./data/to_trade.csv')
         stocks = list(set(traded['Products'].tolist()))
 
@@ -293,13 +311,13 @@ class trade :
                 outcomes.append(np.sign(delta))
             
             df = pd.DataFrame({'Date' : today.strftime('%Y - %m - %d'), 
-                        'Traded': st, 'predictions': pred,
-                        'outcome': outcomes, 'Delta': deltas, 'Probability': prob, 
+                        'Traded': st, 'Prediction': pred,
+                        'Outcome': outcomes, 'Delta': deltas, 'Probability': prob, 
                         'Prob_distance': prob_dist})   
-            record = record.append(df, ignore_index=True)
-        record.to_csv('./data/record_traded.csv', index = False)
+            record_traded = record_traded.append(df, ignore_index=True)
+        record_traded.to_csv('./data/record_traded.csv', index = False)
         
-        record = pd.read_csv('./data/record_all_predictions.csv')
+        record_all = pd.read_csv('./data/record_all_predictions.csv')
         traded = pd.read_csv('./data/trade_data.csv')
         traded['Side'] = traded['Probabilities']
         traded['Side'].loc[traded['Side'] > 0.5] = 1
@@ -326,18 +344,18 @@ class trade :
                 outcomes.append(np.sign(delta))
             
             df = pd.DataFrame({'Date' : today.strftime('%Y - %m - %d'), 
-                        'Traded': st, 'predictions': pred,
-                        'outcome': outcomes, 'Delta': deltas, 'Probability': prob})   
+                        'Traded': st, 'Prediction': pred,
+                        'Outcome': outcomes, 'Delta': deltas, 'Probability': prob}) 
             
-            record = record.append(df, ignore_index=True)
-        record.to_csv('./data/record_all_predictions.csv', index = False)        
+            record_all = record_all.append(df, ignore_index=True)
+        record_all.to_csv('./data/record_all_predictions.csv', index = False)        
         
-        record = pd.read_csv('./data/account.csv')
+        account = pd.read_csv('./data/account.csv')
         account_value = pd.read_csv('./data/account_value.csv')
-        record = record.append(account_value, ignore_index=True)
-        record.to_csv('./data/account.csv', index = False)  
+        account = account.append(account_value, ignore_index=True)
+        account.to_csv('./data/account.csv', index = False)  
         
-        print(record.tail(10))
+        print(account.tail(1))
         return
            
     def execute (self) :
@@ -366,11 +384,13 @@ class trade :
         os.system("python alpaca_trading.py")
         t1 = time.time()
         
-        if (t1-t0) < 27000 :
-            print('\nWaiting for market close', round(((27000 - (t1-t0))/60)/60,2), 'hours\n')
-            time.sleep (27000 - (t1-t0))
+        nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+        close = nyc_datetime.replace(hour=16, minute=0, second=0,microsecond=0)
+        if nyc_datetime < close:
+            difference = close - nyc_datetime
+            print('\nWaiting for market close', round((difference.seconds/60)/60,2), 'hours\n')
+            time.sleep(difference.seconds+60)
         
-        time.sleep(600)
         self.record()
         os.system('python email_updates_evening.py')
 

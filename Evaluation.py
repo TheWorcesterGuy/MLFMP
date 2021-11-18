@@ -32,8 +32,8 @@ def main():
     print('\n Evaluating recorded models \n')
     #Status takes : 'all', 'Archived', 'Deleted', 'Selected', 'xall'
     evaluation().charts()
-    #evaluation().results_traded()
-    #evaluation().results_predicted()
+    evaluation().results_traded()
+    evaluation().results_predicted()
     #evaluation().optimizer()
     
 class evaluation :
@@ -54,10 +54,10 @@ class evaluation :
         record = record[record['days_traded_test'] > int(150*percentage_days)]
         record = record[record['days_traded_live'] > int(100*percentage_days)]
         
-        record = record[record['status'] > 0]
-        accuracy_test = sorted(record['trade_accuracy_test'].to_list())#[:-5]
+        #record = record[record['status'] > 0]
+        accuracy_test = sorted(record['trade_accuracy_test'].to_list())[:-5]
         accuracy_live = record['trade_accuracy_live'].to_list()
-        ROC_live = sorted(record['ROC_test'].to_list())#[:-5]
+        ROC_live = sorted(record['ROC_test'].to_list())[:-5]
         
         mean_live_thr = []
         mean_live_perf = []
@@ -117,8 +117,8 @@ class evaluation :
         # Define the traget names
         target_names = ['Down Day', 'Up Day']
         
-        y_pred = [int(float(i)) for i in record['predictions'].tolist()]
-        y_true = [int(float(i)) for i in record['outcome'].tolist()]
+        y_pred = [int(float(i)) for i in record['Prediction'].tolist()]
+        y_true = [int(float(i)) for i in record['Outcome'].tolist()]
         
         # Build a classifcation report
         report = classification_report(y_true = y_true, y_pred = y_pred, target_names = target_names, output_dict = True)
@@ -154,8 +154,8 @@ class evaluation :
         plt.show()
         
         probs = record['Probability'].dropna().tolist()
-        y_true = np.array([int(float(i)) for i in record['outcome'].tolist()])
-        y_pred = np.array([int(float(i)) for i in record['predictions'].tolist()])
+        y_true = np.array([int(float(i)) for i in record['Outcome'].tolist()])
+        y_pred = np.array([int(float(i)) for i in record['Prediction'].tolist()])
         
         probability_pos = []
         probability_neg = []
@@ -236,8 +236,8 @@ class evaluation :
         # Define the traget names
         target_names = ['Down Day', 'Up Day']
         
-        y_pred = [int(float(i)) for i in record['predictions'].tolist()]
-        y_true = [int(float(i)) for i in record['outcome'].tolist()]
+        y_pred = [int(float(i)) for i in record['Prediction'].tolist()]
+        y_true = [int(float(i)) for i in record['Outcome'].tolist()]
         
         # Build a classifcation report
         report = classification_report(y_true = y_true, y_pred = y_pred, target_names = target_names, output_dict = True)
@@ -273,8 +273,8 @@ class evaluation :
         plt.show()
         
         probs = record['Probability'].dropna().tolist()
-        y_true = np.array([int(float(i)) for i in record['outcome'].tolist()])
-        y_pred = np.array([int(float(i)) for i in record['predictions'].tolist()])
+        y_true = np.array([int(float(i)) for i in record['Outcome'].tolist()])
+        y_pred = np.array([int(float(i)) for i in record['Prediction'].tolist()])
         
         probability_pos = []
         probability_neg = []

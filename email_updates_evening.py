@@ -28,25 +28,24 @@ def main():
         df = pd.read_csv('./data/record_traded.csv').dropna()
         df = df[df['Date']==df['Date'].iloc[-1]]
         df = df.drop(['Date', 'Prob_distance'], axis = 1)
+        delta = df.groupby(['Traded']).mean()['Delta']
+        proba = df.groupby(['Traded']).mean()['Probability']
+        df = df.groupby(['Traded']).sum()
+        df['Delta'] = delta * 100
+        df['Probability'] = proba * 100
+        df = df.round(2)
         
-        table = pd.DataFrame()
-        table['Traded'] = df['Traded'].drop_duplicates().tolist()
-        table['Direction_and_total_prediction'] = (df.groupby(['Traded']).sum())['predictions'].tolist()
-        table['Total_number_of_predictions_and_outcome'] = (df.groupby(['Traded']).sum())['outcome'].tolist()
-        table['Average_probability'] = np.round((df.groupby(['Traded']).mean())['Probability'].tolist(),2)
-        table['Market_variation_%'] = np.round(np.array((df.groupby(['Traded']).mean())['Delta'].tolist()) * 100,2)
-    
-        table = table.set_index('Traded')
-        html_table = table.to_html()
+        html_table = df.to_html()
         return html_table
     
     def table_account() :
-        df = pd.read_csv('./data/account.csv').dropna()
+        df = pd.read_csv('./data/account.csv')
         df = df[df['Date']==df['Date'].iloc[-1]]
         table = df.set_index('Date')
         html_table = table.to_html()
         return html_table
-    
+
+#np.sum(np.array(df['Prediction'].tolist()) * np.array(df['Delta'].tolist()))/np.sum(np.abs(np.array(df['Prediction'].tolist())))
     
     # Create the plain-text and HTML version of your message
     text = """\
@@ -64,11 +63,10 @@ def main():
         <br>
            The trades executed today can be found in the first subsequent table.<br>
            <b>- Traded :</b> Corresponds to the products traded today <br>
-           <b>- Direction_and_total_prediction :</b> Corresponds to the direction of trade, positive for long, negative for short <br>
-               and the effective number of prediction for that direction (sum of all predictions long and short) <br>
-           <b>- Total_number_of_predictions_and_outcome :</b> Corresponds to the true outcome and gives the total number of predictions <br>
-           <b>- Average_probability :</b> The average probability of all predictions <br>
-           <b>- Market_variation_% :</b> The percentage move of the traded product between market open and close <br>
+           <b>- Prediction :</b> Corresponds to the sum of all traded predictions on a given stock <br>
+           <b>- Outcome :</b> Corresponds to the true outcome and gives the total number of predictions <br>
+           <b>- Delta (in %) :</b> The percentage move of the traded product between market open and close <br>
+           <b>- Probability (in %) :</b> Corresponds to The average probability of all predictions <br>
            <br>
            The trading account information can be found in the second subsequent table. <br>
            <b>- AM :</b> Total account value before market open <br>

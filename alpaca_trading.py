@@ -62,8 +62,8 @@ def login() :
         Available funds to trade
     """
     
-    APCA_API_KEY_ID = 'PK9F1TWKTU1ED06L19WA'
-    APCA_API_SECRET_KEY = 'f5p3DhSQK1hkIDGFJnSDh5hN550c35br5PoT5xlC'
+    APCA_API_KEY_ID = 'PKF1XPAUCYY3U4GX8490'
+    APCA_API_SECRET_KEY = 'cAgDh25moHObsPcVJeyTUeK3UmGk1ElZuumgc0dN'
     APCA_API_BASE_URL = 'https://paper-api.alpaca.markets'
     APCA_API_DATA_URL = 'https://data.alpaca.markets'
     APCA_RETRY_MAX = 3	
