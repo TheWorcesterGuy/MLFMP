@@ -17,7 +17,7 @@ warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 stock = sys.argv[1]
 
 
-def main():
+def main(): ########### salut les nazes
 
     print('Creating Twitter features for %s...' % stock)
     # load yahoo stock prices
