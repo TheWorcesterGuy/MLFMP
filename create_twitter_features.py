@@ -30,13 +30,8 @@ def main():
                   glob.glob("data/TWITTER_DATA/%s/encoded_data/*encoded*.csv" % stock)]
     df = pd.concat(list_files, axis=0)
 
-    # convert UTC to NY time and drop tweets during holidays / weekends
-    # convert df to NY time
-    # create a date column and left join df on df_stock
-    # drop columns with nans on df_stock val except if date is today
-
     # convert UTC time to NY time and save tweets after 8:35 NY time for next day
-    df = fix_tweet_timing(df)
+    df = fix_tweet_timing(df, df_stock)
 
     # aggregate tweets
     df = aggregate_tweets(df)
@@ -46,9 +41,6 @@ def main():
     
     # create stock market name column
     df['stock'] = stock
-
-    # average features across weekends and holidays
-    #df = average_sentiment_holidays(df)
 
     # create derived features
     df = create_derived_features(df)
@@ -106,18 +98,27 @@ def std_LM(df):
     return std
 
 
-def fix_tweet_timing(df):
+def fix_tweet_timing(df, df_stock):
+
+    # convert df to NY time
     eastern = pytz.timezone('US/Eastern')
     df['Datetime'] = pd.to_datetime(df['Datetime'])
     df['Datetime'] = df['Datetime'].dt.tz_convert(eastern)
 
-    cond1 = df['Datetime'].dt.hour > 8
-    cond2 = (df['Datetime'].dt.hour == 8) & (df['Datetime'].dt.minute > 35)
+    # drop days of tweet if no stock except if last day
+    df['Date'] = pd.to_datetime(df['Datetime'].dt.date)
+    df = df.merge(df_stock, on='Date', how='left')
+    df = df[(df['Open'].notna()) | (df['Date'] == df['Date'].max())]
+    df = df.drop(['Date', 'Close', 'Open'], axis=1)
 
-    # tweets after 8:35 am NY time are saved for next day
-    df.loc[cond1 | cond2, 'Datetime'] += pd.Timedelta(hours=12)
+    # tweets after 8:35 am NY time are saved for next day which means we shift forward by 15 hours and 25 minutes
+    df['Datetime'] = df['Datetime'] + pd.DateOffset(hours=15, minutes=25)
 
+    # tweets that fall on saturday must be redirected for monday > adding 48 hours to the tweets on saturday
+    df['dayweek'] = df['Datetime'].dt.dayofweek
+    df.loc[df['dayweek'] == 5, 'Datetime'] += pd.Timedelta(hours=48)
     df['Date'] = pd.to_datetime(df['Datetime'].dt.date, errors='coerce')
+    df = df.drop(['dayweek'], axis=1)
 
     return df
 
@@ -175,95 +176,6 @@ def aggregate_tweets(df):
     df = df_a1.merge(df_a2, on='Date', how='outer').merge(df_b1, on='Date', how='outer').merge(df_b2, on='Date', how='outer')\
         .merge(df_c1, on='Date', how='outer').merge(df_c2, on='Date', how='outer').merge(df_d1, on='Date', how='outer')\
         .merge(df_d2, on='Date', how='outer').merge(df_e1, on='Date', how='outer').merge(df_e2, on='Date', how='outer')
-
-    return df
-
-
-def average_sentiment_holidays(df):
-
-    df['Weekday'] = df['Date'].dt.dayofweek
-
-    # compute mean sentiment for weekend / holiday periods
-    df = df.sort_values('Date', ascending=True)
-    df = df.reset_index(drop=True)
-    for k in range(1, df.shape[0]):
-        LM1 = []
-        LM2 = []
-        vader1 = []
-        vader2 = []
-        std_vader1 = []
-        std_vader2 = []
-        std_LM1 = []
-        std_LM2 = []
-        nb_tweet1 = []
-        nb_tweet2 = []
-
-        if np.isnan(df.iloc[k]['Open']):
-            i = 1
-            LM1.append(df.iloc[k]['LM_1$'])
-            LM2.append(df.iloc[k]['LM_2$'])
-            vader1.append(df.iloc[k]['vader_1$'])
-            vader2.append(df.iloc[k]['vader_2$'])
-            std_vader1.append(df.iloc[k]['std_vader_1$'])
-            std_vader2.append(df.iloc[k]['std_vader_2$'])
-            std_LM1.append(df.iloc[k]['std_LM_1$'])
-            std_LM2.append(df.iloc[k]['std_LM_2$'])
-            nb_tweet1.append(df.iloc[k]['nb_tweet_1$'])
-            nb_tweet2.append(df.iloc[k]['nb_tweet_2$'])
-
-            if k + 1 < df.shape[0]:
-
-                while k + i < df.shape[0] and np.isnan(df.iloc[k + i]['Open']):
-                    LM1.append(df.iloc[k + i]['LM_1$'])
-                    LM2.append(df.iloc[k + i]['LM_2$'])
-                    vader1.append(df.iloc[k + i]['vader_1$'])
-                    vader2.append(df.iloc[k + i]['vader_2$'])
-                    std_vader1.append(df.iloc[k + i]['std_vader_1$'])
-                    std_vader2.append(df.iloc[k + i]['std_vader_2$'])
-                    std_LM1.append(df.iloc[k + i]['std_LM_1$'])
-                    std_LM2.append(df.iloc[k + i]['std_LM_2$'])
-                    nb_tweet1.append(df.iloc[k + i]['nb_tweet_1$'])
-                    nb_tweet2.append(df.iloc[k + i]['nb_tweet_2$'])
-
-                    i = i + 1
-
-            for j in range(k, k + i):
-                df.loc[j, 'LM_1$'] = np.mean(LM1)
-                df.loc[j, 'LM_2$'] = np.mean(LM2)
-                df.loc[j, 'vader_1$'] = np.mean(vader1)
-                df.loc[j, 'vader_2$'] = np.mean(vader2)
-                df.loc[j, 'std_vader_1$'] = np.mean(std_vader1)
-                df.loc[j, 'std_vader_2$'] = np.mean(std_vader2)
-                df.loc[j, 'std_LM_1$'] = np.mean(std_LM1)
-                df.loc[j, 'std_LM_2$'] = np.mean(std_LM2)
-                df.loc[j, 'nb_tweet_1$'] = np.mean(nb_tweet1)
-                df.loc[j, 'nb_tweet_2$'] = np.mean(nb_tweet2)
-
-    # keep only one day of holidays/weekend (sentiment are already average over the period)
-    rows_index = []
-    for k in range(1, df.shape[0] - 1):
-        if np.isnan(df.iloc[k]['Open']) and np.isnan(df.iloc[k + 1]['Open']):
-            rows_index.append(k)
-    df = df.drop(index=rows_index)
-
-    # average the sentiment of the vacation and the next working day
-    rows_index = []
-    df = df.sort_values('Date', ascending=True)
-    df = df.reset_index(drop=True)
-    for k in range(1, df.shape[0] - 1):
-        if np.isnan(df.iloc[k]['Open']):
-            rows_index.append(k)
-            df.loc[k + 1, 'LM_1$'] = (df.iloc[k + 1]['LM_1$'] + df.iloc[k]['LM_1$']) / 2
-            df.loc[k + 1, 'LM_2$'] = (df.iloc[k + 1]['LM_2$'] + df.iloc[k]['LM_2$']) / 2
-            df.loc[k + 1, 'vader_1$'] = (df.iloc[k + 1]['vader_1$'] + df.iloc[k]['LM_1$']) / 2
-            df.loc[k + 1, 'vader_2$'] = (df.iloc[k + 1]['vader_2$'] + df.iloc[k]['LM_2$']) / 2
-            df.loc[k + 1, 'std_vader_1$'] = (df.iloc[k + 1]['std_vader_1$'] + df.iloc[k]['std_vader_1$']) / 2
-            df.loc[k + 1, 'std_vader_2$'] = (df.iloc[k + 1]['std_vader_2$'] + df.iloc[k]['std_vader_2$']) / 2
-            df.loc[k + 1, 'std_LM_1$'] = (df.iloc[k + 1]['std_LM_1$'] + df.iloc[k]['std_LM_1$']) / 2
-            df.loc[k + 1, 'std_LM_2$'] = (df.iloc[k + 1]['std_LM_2$'] + df.iloc[k]['std_LM_2$']) / 2
-            df.loc[k + 1, 'nb_tweet_1$'] = (df.iloc[k + 1]['nb_tweet_1$'] + df.iloc[k]['nb_tweet_1$']) / 2
-            df.loc[k + 1, 'nb_tweet_2$'] = (df.iloc[k + 1]['nb_tweet_2$'] + df.iloc[k]['nb_tweet_2$']) / 2
-    df = df.drop(index=rows_index)
 
     return df
 
