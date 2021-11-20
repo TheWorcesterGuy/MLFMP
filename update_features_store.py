@@ -29,26 +29,31 @@ def main():
 
     start = datetime.now()
     t0 = time.time()
+    
+    
+    # update minute price data download and create features
+    os.system('python download_minute_price.py')
+    apply_parallel_command(5, "./create_minute_price_features.py", stocks)
+    
+    
+    stop_high_res_price = datetime.now()
+    
 
-    # update google trends download
+    # update google trends download and create features
     os.system("python download_google_trends.py")
-
-    # create google trend features
     apply_parallel_command(10, "./create_google_trends_features.py", google_trends)
 
     stop_google_trends = datetime.now()
 
-    # get trading features
+    # update download price data and create features
     os.system("python download_price.py")
     apply_parallel_command(5, "./create_trading_features.py", stocks)
 
     stop_trade = datetime.now()
 
-    # update tweet downloading and encoding
+    # update tweet download and create features
     apply_parallel_command(6, "./download_tweets.py", stocks)
     apply_parallel_command(6, "./encode_tweets.py", stocks)
-
-    # get twitter features
     apply_parallel_command(3, "./create_twitter_features.py", stocks)
 
     # merge the two sources of features
@@ -62,6 +67,8 @@ def main():
     os.system("rm ./data/*features_twitter.csv")
 
     stop = datetime.now()
+    
+    print('\n Time to update minute price features: ', (stop_high_res_price - start))
     print('\n Time to update google trend features: ', (stop_google_trends - start))
     print('\n Time to update trade features: ', (stop_trade - stop_google_trends))
     print('\n Time to update twitter features: ', (stop - stop_trade))
@@ -103,14 +110,16 @@ def merge_files(stocks):
     for stock in stocks:
         df_price = pd.read_csv('./data/%s_features_trading.csv' % stock)
         df_twitter = pd.read_csv('./data/%s_features_twitter.csv' % stock)
+        df_minute_price = pd.read_csv('./data/%s_minute_price_features.csv' % stock)
         if os.path.exists('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (stock, stock)): # we don't have google trends for all stocks yet
             df_trend = pd.read_csv('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (stock, stock))
             df_merged = reduce(lambda left, right: pd.merge(left, right, on=['Date'],
-                                                            how='inner'), [df_price, df_twitter, df_trend])
+                                                            how='inner'), [df_price, df_twitter, df_minute_price, df_trend])
             df_list.append(df_merged)
             os.system(" rm './data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv'" % (stock, stock))
         else:
-            df_merged = df_price.merge(df_twitter, on='Date', how='inner')
+            df_merged = reduce(lambda left, right: pd.merge(left, right, on=['Date'],
+                                                            how='inner'), [df_price, df_twitter, df_minute_price])
             df_list.append(df_merged)
 
     df = pd.concat(df_list)
@@ -127,7 +136,7 @@ def merge_files(stocks):
     if os.path.exists('./data/GOOGLE_TRENDS/mood_features_g.csv'):
         df_mood_trend = pd.read_csv('./data/GOOGLE_TRENDS/mood_features_g.csv')
         df = df.merge(df_mood_trend, on='Date', how='inner')
-        os.system('rm /data/GOOGLE_TRENDS/mood_features_g.csv')
+        os.system('rm ./data/GOOGLE_TRENDS/mood_features_g.csv')
 
     df = df.sort_values('Date', ascending=False)
 
