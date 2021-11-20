@@ -27,6 +27,7 @@ def main():
     print(' Done creating price features for %s' % sys.argv[1])
     #features(symbol='AAPL').execute() # This line is reserved for testing
 
+
 class features:
     def __init__(self, symbol):
         
@@ -93,7 +94,6 @@ class features:
         price_data = self.price_data
 
         # create ratios of downs last N days
-
         price_data['down'] = 0
         price_data.loc[price_data['change_in_price'] < 0, 'down'] = 1
 
@@ -119,12 +119,12 @@ class features:
             price_data['min_diff' + str(n)] = (price_data['Close'] - mn) / mn
             price_data['max_acc' + str(n)] = (price_data['max_diff' + str(n)] - price_data['max_diff' + str(n)].shift(1)) / price_data['Close']
             price_data['min_acc' + str(n)] = (price_data['min_diff' + str(n)] - price_data['min_diff' + str(n)].shift(1)) / price_data['Close']
-            price_data['max_diff' + 'Fib1' + str(n)] = (mx - mn) / mn
-            price_data['max_diff' + 'Fib61' + str(n)] = 0.6180 * (mx - mn) / mn
-            price_data['max_diff' + 'Fib38' + str(n)] = 0.3820 * (mx - mn) / mn
-            price_data['max_diff' + 'Fib12' + str(n)] = 0.1180 * (mx - mn) / mn
-            price_data['max_diff' + 'Fib5' + str(n)] = 0.0486 * (mx - mn) / mn
-            price_data['max_diff' + 'Fib2' + str(n)] = 0.0180 * (mx - mn) / mn
+            #price_data['max_diff' + 'Fib1' + str(n)] = (mx - mn) / mn
+            #price_data['max_diff' + 'Fib61' + str(n)] = 0.6180 * (mx - mn) / mn
+            #price_data['max_diff' + 'Fib38' + str(n)] = 0.3820 * (mx - mn) / mn
+            #price_data['max_diff' + 'Fib12' + str(n)] = 0.1180 * (mx - mn) / mn
+            #price_data['max_diff' + 'Fib5' + str(n)] = 0.0486 * (mx - mn) / mn
+            #price_data['max_diff' + 'Fib2' + str(n)] = 0.0180 * (mx - mn) / mn
         
         #create 200 day rolling max / min
         mn = price_data.groupby('symbol')['Low'].transform(lambda x: x.rolling(window = 200).min())
@@ -461,28 +461,27 @@ class features:
         #Variations in RSI7
         n = 10
         
-        for i in range(n):
-        # Calculate the Rate of Change in the Price, and store it in the Data Frame.
-            price_data['RSI3_Rate_Of_Change' + str(i)] = price_data.groupby('symbol')['RSI3'].transform(lambda x: x.pct_change(periods = n))
+        #for i in range(n):
+        ## Calculate the Rate of Change in the Price, and store it in the Data Frame.
+            #price_data['RSI3_Rate_Of_Change' + str(i)] = price_data.groupby('symbol')['RSI3'].transform(lambda x: x.pct_change(periods = n))
         
         #Variations in RSI7
         
-        for i in range (n):
+        #for i in range (n):
+        ## Calculate the Rate of Change in the Price, and store it in the Data Frame.
+            #price_data['RSI7_Rate_Of_Change' + str(i)] = price_data.groupby('symbol')['RSI7'].transform(lambda x: x.pct_change(periods = n))
+        
+        ##Variations in RSI14
+        
+        #for i in range (n):
+        ## Calculate the Rate of Change in the Price, and store it in the Data Frame.
+            #price_data['RSI14_Rate_Of_Change' + str(i)] = price_data.groupby('symbol')['RSI14'].transform(lambda x: x.pct_change(periods = n))
+        
+        ##OBV rate of change
+        #n = 10
+        #for i in range(n):
         # Calculate the Rate of Change in the Price, and store it in the Data Frame.
-            price_data['RSI7_Rate_Of_Change' + str(i)] = price_data.groupby('symbol')['RSI7'].transform(lambda x: x.pct_change(periods = n))
-        
-        #Variations in RSI14
-        
-        for i in range (n):
-        # Calculate the Rate of Change in the Price, and store it in the Data Frame.
-            price_data['RSI14_Rate_Of_Change' + str(i)] = price_data.groupby('symbol')['RSI14'].transform(lambda x: x.pct_change(periods = n))
-        
-        #OBV rate of change
-        n = 10
-        
-        for i in range(n):
-        # Calculate the Rate of Change in the Price, and store it in the Data Frame.
-            price_data['OBV_Rate_Of_Change' + str(i)] = price_data.groupby('symbol')['On Balance Volume'].transform(lambda x: x.pct_change(periods = n))
+            #price_data['OBV_Rate_Of_Change' + str(i)] = price_data.groupby('symbol')['On Balance Volume'].transform(lambda x: x.pct_change(periods = n))
         
         #Bollinger bands 20
         Close = price_data[['symbol','Close']].copy()
