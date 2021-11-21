@@ -86,8 +86,8 @@ def trade_system():
             start = nyc_datetime.replace(hour=8, minute=35, second=0,microsecond=0)
             end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
             if (nyc_datetime >= start) & (nyc_datetime < end) :
-                #os.system("python3 update_features_store.py")
-                #os.system("python3 reporting_features_store.py")
+                os.system("python3 update_features_store.py")
+                os.system("python3 reporting_features_store.py")
                 os.system("python3 trade.py > ./log/trade_log" + nyc_datetime.strftime('%Y-%m-%d') + ".txt")
 
             nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))

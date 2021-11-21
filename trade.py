@@ -134,6 +134,9 @@ class trade :
         self.features_name = [x for x in self.features_name if x in price_data.columns] # Account for potential feature store modifications, WARNING this can lead weaker predictions
         self.X_train = self.price_data_train[self.features_name] # Load as class attribute the train set
         self.X_test = price_data_test[self.features_name] # Load as class attribute todays data for the stock to predict
+        print('\n The folowing stock will predicted using the adjacent features :')
+        print(self.X_test)
+        print('\n')
 
         return 
     
