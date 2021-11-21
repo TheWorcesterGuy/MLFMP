@@ -8,6 +8,7 @@ Created on Sun Nov 14 02:44:14 2021
 
 import os
 import glob
+import pandas as pd
 
 def clean() :
     if len(glob.glob('models')) :
@@ -50,3 +51,14 @@ def make() :
     os.system('mkdir ./Best_models')
     os.system('mkdir ./models_in_use')
     os.system('touch ./data/history_google_updates.csv')
+    
+def clean_features() : 
+    models = glob.glob('./models/*csv') + glob.glob('./Best_models/*csv')
+    models = [x.split('/')[-1].replace('.csv','') for x in models]
+    models = list(set(models))
+    features = pd.read_csv('./data/model_features.csv')
+    to_remove = [x for x in features.columns if x not in models]
+    if len(to_remove)>0:
+        features = features.drop(to_remove, axis=1)
+        features.to_csv('./data/model_features.csv', index = False)
+    

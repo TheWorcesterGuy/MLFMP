@@ -176,7 +176,9 @@ class trade :
         df = pd.read_csv('./data/to_trade.csv').dropna()
         trade_probability = df.groupby(['Products']).mean()['Prob_distance']
         Model_performance = df.groupby(['Products']).mean()['Model_performance']
+        Probability = df.groupby(['Products']).mean()['Probability']
         df = df.groupby(['Products']).sum()
+        df['Probability'] = Probability
         df['Balanced_probability'] = trade_probability + 0.5
         df['Model_performance'] = Model_performance
         df['K%'] = df['Balanced_probability'] - (1-df['Balanced_probability'])/df['Model_performance']
@@ -224,13 +226,13 @@ class trade :
                     prob_distance = np.append(prob_distance, probability[i] - level[i])
                     product = np.append(product, stock)
                     prob = np.append(prob, probability[i])
-                    model_performance = np.append(model_performance, performance[i]/(1-performance[i]))
+                    model_performance = np.append(model_performance, 0.01*performance[i]/(1-performance[i]*0.01))
                 if (probability[i] < 0.5) & ((1-probability[i]) > level[i]):
                     side = np.append(side, -1)
                     prob_distance = np.append(prob_distance, (1-probability[i]) - level[i])
                     product = np.append(product, stock)
                     prob = np.append(prob, probability[i])
-                    model_performance = np.append(model_performance, performance[i]/(1-performance[i]))
+                    model_performance = np.append(model_performance, 0.01*performance[i]/(1-performance[i]*0.01))
              
             df = pd.DataFrame({'Products' : product, 
                     'Prob_distance': prob_distance, 'Side': side, 'Probability' : prob, 'Model_performance' : model_performance})

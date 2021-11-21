@@ -25,7 +25,7 @@ def main():
     
     def table() :
         df = pd.read_csv('./data/days_trades.csv').dropna()
-        df = df.rename(columns={"product": "To_trade", "side": "Direction"})
+        df = df.rename(columns={"Products": "To_trade", "Side": "Direction"})
         df = df.set_index('To_trade')
         html_table = df.to_html()
         return html_table
