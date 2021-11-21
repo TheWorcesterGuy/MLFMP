@@ -23,15 +23,15 @@ def main():
     nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
     api, buying_power, account_value = login()
     trade = pd.read_csv('./data/to_trade.csv')
-    trade_data, trade_value = distribution(api, buying_power, trade)
+    trade_data, trade_value = distribution(api, buying_power)
     os.system('python email_updates_morning.py')
     open_trade(api, trade_data)
-    nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-    close = nyc_datetime.replace(hour=15, minute=59, second=30,microsecond=0)
-    difference = close - nyc_datetime
-    print('Sleeping : ', difference.seconds )
-    time.sleep(difference.seconds)
-    close_trades(api, account_value, trade_value)
+    # nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+    # close = nyc_datetime.replace(hour=15, minute=59, second=30,microsecond=0)
+    # difference = close - nyc_datetime
+    # print('Sleeping : ', difference.seconds )
+    # time.sleep(difference.seconds)
+    # close_trades(api, account_value, trade_value)
             
 
 def error_handling(error_message) :
@@ -74,12 +74,12 @@ def login() :
     
     cash = account.cash 
     account_value = pd.DataFrame({'Date' : datetime.now().strftime('%Y - %m - %d'), 'AM' : [cash]})
-    account_value.to_csv('./data/account_value.csv', index = False)
+    #account_value.to_csv('./data/account_value.csv', index = False)
     print('${} is available as buying power.'.format(account.buying_power))
     
     return api, float(account.buying_power), account_value
 
-def distribution(api, buying_power, trade) :
+def distribution(api, buying_power) :
     """Class function used to distribute a reduced buying power between stocks based on probabilities and number of predictions'
 
     Returned
@@ -90,41 +90,30 @@ def distribution(api, buying_power, trade) :
     
     reduced_power = (buying_power/2)
     print(reduced_power)
-    stocks = trade['Products'].tolist()
-    stocks = list(set(stocks))
+    df = pd.read_csv('./data/to_trade.csv')
     
     Last_Stock_Value = []
-    Fractionableionable = []
-    side = []
-    probability = []
-    df = pd.DataFrame(columns = ['product', 'side', 'Value_to_trade_$', 'Fractionable','Last_Stock_Value_$'])
-    for stock in stocks :
+    Fractionable = []
+
+    for stock in df['Products'] :
         barset = api.get_barset(stock, 'day', limit=5)
         bars = barset[stock]
         Last_Stock_Value.append(bars[-1].c + bars[-1].c * 0.02)
-        side.append(np.sum(trade['Side'][trade['Products'] == stock].tolist()))
+        side = df['Side'] [df['Products'] == stock].iloc[0]
         
-        if side[-1] <= 0 :
+        if side < 0 :
             frac = False
         else :
             frac = api.get_asset(stock).fractionable
         
-        Fractionableionable.append(frac)
-        probability.append(np.mean(trade['Prob_distance'][trade['Products']==stock].tolist()))
+        Fractionable.append(frac)
          
-    df['product'] = stocks
-    df['side'] = side
-    df['Value_to_trade_$'] = probability
-    df['Fractionable'] = Fractionableionable
+    df['Fractionable'] = Fractionable
     df['Last_Stock_Value_$'] = Last_Stock_Value
-    
-    df = df[df['Value_to_trade_$'] != 0]
-    df['Value_to_trade_$'] = np.abs(np.array(df['Value_to_trade_$'].tolist()) *  np.array(df['side'].tolist()))
-    print(df)
-    
-    df = df.sort_values(by=['Value_to_trade_$'], ascending=False)
-    df['Value_to_trade_$'] = (df['Value_to_trade_$'])/(df['Value_to_trade_$'].sum()) * reduced_power
+    df = df.sort_values(by=['K%'], ascending=False)
+    df['Value_to_trade_$'] = df['K%']*reduced_power
     df['Quantity'] = df['Value_to_trade_$']/df['Last_Stock_Value_$']
+    
     df['Quantity'][df['Fractionable'] == False] = np.floor(df['Quantity'][df['Fractionable'] == False].tolist())
     df['Quantity'][df['Fractionable'] == True] = np.around(df['Quantity'][df['Fractionable'] == True].tolist(),2)
     df = df[df['Quantity'] > 0]
@@ -149,25 +138,25 @@ def open_trade(api, trade_data) :
     print('Orders : If the following detail does not change then, trade warning')
     print(orders)
     
-    stocks = trade_data['product'].tolist()
-    side = trade_data['side'].tolist()
-    Quantity = trade_data['Quantity'].tolist()
+    stocks = trade_data['Products'].tolist()
+    sides = trade_data['side'].tolist()
+    quantities = trade_data['Quantity'].tolist()
     
-    for i in range(len(stocks)) :
+    for stock,side,quantity in zip(stocks,sides,quantities) :
     
-        if side[i] >= 1 :
+        if side >= 1 :
             api.submit_order(
-                symbol = stocks[i],
-                qty = Quantity[i],  
+                symbol = stock,
+                qty = quantity,  
                 side = 'buy',
                 type = 'market',
                 time_in_force = 'day',
             )
             
-        if side[i] <= -1 :
+        if side <= -1 :
             api.submit_order(
-                symbol = stocks[i],
-                qty = Quantity[i],  
+                symbol = stock,
+                qty = quantity,  
                 side = 'sell',
                 type = 'market',
                 time_in_force = 'day',
