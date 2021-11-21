@@ -168,9 +168,27 @@ class trade :
         data = pd.read_csv('./data/trade_data.csv')
         today = datetime.today()
         df = pd.DataFrame({'Date' : today.strftime('%Y - %m - %d'), 'Products' : self.predict, 
-                    'Probabilities': [self.prediction[0]], 'Model_level': [self.model_level]})
+                    'Probabilities': [self.prediction[0]], 'Model_level': [self.model_level], 'Model_performance': [self.model_performance]})
         data = data.append(df, ignore_index=True)
         data.to_csv('./data/trade_data.csv', index = False)
+        
+    def distribution(self) :
+        df = pd.read_csv('./data/to_trade.csv').dropna()
+        trade_probability = df.groupby(['Products']).mean()['Prob_distance']
+        Model_performance = df.groupby(['Products']).mean()['Model_performance']
+        df = df.groupby(['Products']).sum()
+        df['Balanced_probability'] = trade_probability + 0.5
+        df['Model_performance'] = Model_performance
+        df['K%'] = df['Balanced_probability'] - (1-df['Balanced_probability'])/df['Model_performance']
+        df['K%'] = df['K%']/df['K%'].sum()
+        df = df.round(4)
+        df['Side'][df['Side']<0] = -1
+        df['Side'][df['Side']>0] = 1
+        df['Side'][df['Side']==0] = np.nan
+        df = df.dropna()
+        df.to_csv('./data/to_trade.csv')
+        return df
+        
         
     def trade_data(self) :
         """Class function used to create 'to_trade.csv' file with all predictions to be traded. 
@@ -187,36 +205,40 @@ class trade :
         today = datetime.today()
         to_trade = pd.DataFrame({'Products' : [], 
                     'Prob_distance': [], 'Side': [],
-                    'Probability' : []})
+                    'Probability' : [], 'Model_performance': []})
         
         for stock in stocks:
-            test1, test2 = 0, 0
             data_stock = data[data['Products'] == stock]
             probability = data_stock['Probabilities'][data_stock['Products'] == stock].tolist() 
             level = data_stock['Model_level'][data_stock['Products'] == stock].tolist()
+            performance = data_stock['Model_performance'][data_stock['Products'] == stock].tolist()
             
             side = np.array([])
             prob_distance = np.array([])
             product = np.array([])
             prob = np.array([])
+            model_performance = np.array([])
             for i in range(len(probability)) :
                 if (probability[i] > 0.5) & (probability[i] > level[i]):
                     side = np.append(side, 1)
                     prob_distance = np.append(prob_distance, probability[i] - level[i])
                     product = np.append(product, stock)
                     prob = np.append(prob, probability[i])
+                    model_performance = np.append(model_performance, performance[i]/(1-performance[i]))
                 if (probability[i] < 0.5) & ((1-probability[i]) > level[i]):
                     side = np.append(side, -1)
                     prob_distance = np.append(prob_distance, (1-probability[i]) - level[i])
                     product = np.append(product, stock)
                     prob = np.append(prob, probability[i])
+                    model_performance = np.append(model_performance, performance[i]/(1-performance[i]))
              
             df = pd.DataFrame({'Products' : product, 
-                    'Prob_distance': prob_distance, 'Side': side, 'Probability' : prob})
+                    'Prob_distance': prob_distance, 'Side': side, 'Probability' : prob, 'Model_performance' : model_performance})
             to_trade = to_trade.append(df, ignore_index=True)
         
-        to_trade['Prob_distance'] = to_trade['Prob_distance']/to_trade['Prob_distance'].sum()
         to_trade.to_csv('./data/to_trade.csv', index = False)
+        self.distribution()
+        
                         
     def model_info(self, model) :
         """Class function used to make prediction using model (lgbm_light) with paramaters supplied by model caracteristics
@@ -233,7 +255,8 @@ class trade :
         record = pd.read_csv('./data/record_model.csv')
         record = record.drop_duplicates(subset=['model_name'], keep='last')
         record = record[record['model_name'] == model]
-        self.model_level = np.round(0.5*(record['model_level_live'].iloc[0] + record['model_level_test'].iloc[0]),2)
+        self.model_level = np.round(record['model_level_live'].iloc[0],2)
+        self.model_performance = np.round(record['trade_accuracy_live'].iloc[0],2)
 
     def layout(self, model) :
         """Class function used to load the model in use parameters from the model csv
@@ -387,15 +410,15 @@ class trade :
         os.system("python alpaca_trading.py")
         t1 = time.time()
         
-        nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-        close = nyc_datetime.replace(hour=16, minute=0, second=0,microsecond=0)
-        if nyc_datetime < close:
-            difference = close - nyc_datetime
-            print('\nWaiting for market close', round((difference.seconds/60)/60,2), 'hours\n')
-            time.sleep(difference.seconds+60)
+        # nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+        # close = nyc_datetime.replace(hour=16, minute=0, second=0,microsecond=0)
+        # if nyc_datetime < close:
+        #     difference = close - nyc_datetime
+        #     print('\nWaiting for market close', round((difference.seconds/60)/60,2), 'hours\n')
+        #     time.sleep(difference.seconds+60)
         
-        self.record()
-        os.system('python email_updates_evening.py')
+        # self.record()
+        # os.system('python email_updates_evening.py')
 
         return 
     
