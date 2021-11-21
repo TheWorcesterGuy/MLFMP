@@ -53,6 +53,7 @@ def main():
     apply_parallel_command(6, "./download_tweets.py", stocks)
     apply_parallel_command(6, "./encode_tweets.py", stocks)
     apply_parallel_command(3, "./create_twitter_features.py", stocks)
+    
 
     # merge the two sources of features
     df = merge_files(stocks)
