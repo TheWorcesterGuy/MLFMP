@@ -26,12 +26,12 @@ def main():
     trade_data, trade_value = distribution(api, buying_power)
     os.system('python email_updates_morning.py')
     open_trade(api, trade_data)
-    # nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-    # close = nyc_datetime.replace(hour=15, minute=59, second=30,microsecond=0)
-    # difference = close - nyc_datetime
-    # print('Sleeping : ', difference.seconds )
-    # time.sleep(difference.seconds)
-    # close_trades(api, account_value, trade_value)
+    nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+    close = nyc_datetime.replace(hour=15, minute=59, second=30,microsecond=0)
+    difference = close - nyc_datetime
+    print('Sleeping : ', difference.seconds )
+    time.sleep(difference.seconds)
+    close_trades(api, account_value, trade_value)
             
 
 def error_handling(error_message) :
@@ -74,7 +74,7 @@ def login() :
     
     cash = account.cash 
     account_value = pd.DataFrame({'Date' : datetime.now().strftime('%Y - %m - %d'), 'AM' : [cash]})
-    #account_value.to_csv('./data/account_value.csv', index = False)
+    account_value.to_csv('./data/account_value.csv', index = False)
     print('${} is available as buying power.'.format(account.buying_power))
     
     return api, float(account.buying_power), account_value
@@ -139,7 +139,7 @@ def open_trade(api, trade_data) :
     print(orders)
     
     stocks = trade_data['Products'].tolist()
-    sides = trade_data['side'].tolist()
+    sides = trade_data['Side'].tolist()
     quantities = trade_data['Quantity'].tolist()
     
     for stock,side,quantity in zip(stocks,sides,quantities) :

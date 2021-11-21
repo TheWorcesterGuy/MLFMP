@@ -406,19 +406,17 @@ class trade :
             self.pre_trade_data()
         
         self.trade_data()
-        t0 = time.time()
         os.system("python alpaca_trading.py")
-        t1 = time.time()
         
-        # nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-        # close = nyc_datetime.replace(hour=16, minute=0, second=0,microsecond=0)
-        # if nyc_datetime < close:
-        #     difference = close - nyc_datetime
-        #     print('\nWaiting for market close', round((difference.seconds/60)/60,2), 'hours\n')
-        #     time.sleep(difference.seconds+60)
+        nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+        close = nyc_datetime.replace(hour=16, minute=0, second=0,microsecond=0)
+        if nyc_datetime < close:
+            difference = close - nyc_datetime
+            print('\nWaiting for market close', round((difference.seconds/60)/60,2), 'hours\n')
+            time.sleep(difference.seconds+60)
         
-        # self.record()
-        # os.system('python email_updates_evening.py')
+        self.record()
+        os.system('python email_updates_evening.py')
 
         return 
     
