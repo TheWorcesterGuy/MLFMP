@@ -205,7 +205,7 @@ class market :
             counter += 1
             
     def threshold (self) :
-        level = 60
+        level = 65
         thresholds = np.linspace(0.5, 1, num = 101)
         accuracy = 0
         n = 0

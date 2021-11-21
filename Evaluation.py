@@ -32,8 +32,8 @@ def main():
     print('\n Evaluating recorded models \n')
     #Status takes : 'all', 'Archived', 'Deleted', 'Selected', 'xall'
     evaluation().charts()
-    evaluation().results_traded()
-    evaluation().results_predicted()
+    #evaluation().results_traded()
+    #evaluation().results_predicted()
     #evaluation().optimizer()
     
 class evaluation :
@@ -42,7 +42,7 @@ class evaluation :
         record = record.drop_duplicates(subset=['model_name'], keep='last')
         record['date'] = pd.to_datetime(record['date'])
         today = datetime.now()
-        recent = today - timedelta(days=1)
+        recent = today - timedelta(days=2)
         record = record[record['date'] > recent]
         self.record = record.dropna()
         
@@ -55,9 +55,9 @@ class evaluation :
         record = record[record['days_traded_live'] > int(100*percentage_days)]
         
         #record = record[record['status'] > 0]
-        accuracy_test = sorted(record['trade_accuracy_test'].to_list())[:-5]
+        accuracy_test = sorted(record['trade_accuracy_test'].to_list())#[:-5]
         accuracy_live = record['trade_accuracy_live'].to_list()
-        ROC_live = sorted(record['ROC_test'].to_list())[:-5]
+        ROC_live = sorted(record['ROC_test'].to_list())#[:-5]
         
         mean_live_thr = []
         mean_live_perf = []
