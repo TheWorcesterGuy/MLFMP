@@ -26,8 +26,8 @@ import yaml
 
 def main():
 
-	stocks = ['INTC', 'TSLA',  'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA', 'BA',
-              'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'JNJ', 'PG', 'NKE']
+	stocks = ['INTC', 'TSLA',  'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA', 'BA', 'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'JNJ', 'PG', 'NKE']
+              
 
 	with open('credentials.yaml', 'r') as stream:
 		creds = yaml.safe_load(stream)
@@ -44,7 +44,7 @@ def main():
 			df = pd.read_csv('./data/TRADE_DATA/minute_data/%s.csv' % stock)
 			df['Datetime'] = pd.to_datetime(df['Datetime'], errors='coerce')
 			df = df.sort_values('Datetime')
-			start_date = df['Datetime'].iloc[-60]  # to make sure we don't have any hole
+			start_date = df['Datetime'].iloc[-400]  # to make sure we don't have any hole
 		else:
 			start_date = datetime(2014, 1, 1)
 
@@ -70,11 +70,11 @@ def get_price(ticker, alpaca_key_id, alpaca_secret_key, start_date):
 	APCA_RETRY_WAIT = 3
 	APCA_RETRY_CODES = 429.504
 	api = tradeapi.REST(APCA_API_KEY_ID, APCA_API_SECRET_KEY, APCA_API_BASE_URL)
-	print(start_date)
 
 	temp = api.get_bars(ticker, TimeFrame.Minute, start_date.strftime('%Y-%m-%d'),
                         (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d'), limit=10000000000,
                         adjustment='raw').df
+
 	time.sleep(1)
 
 	return temp
