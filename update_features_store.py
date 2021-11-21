@@ -22,6 +22,7 @@ def main():
 
     stocks = ['INTC', 'TSLA',  'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA', 'BA',
               'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'JNJ', 'PG', 'NKE']
+             
 
     google_trends = ['facebook stock', 'SPY', 'AMD', 'AAPL', 'AMZN', 'QQQ', 'TSLA', 'MSFT', 'boeing stock',
                      'INTC', 'DIS', 'JPM', 'WMT', 'NFLX', 'GOOG', 'GOOGL', 'NVDA', 'TWTR',
@@ -30,14 +31,11 @@ def main():
     start = datetime.now()
     t0 = time.time()
     
-    
     # update minute price data download and create features
     os.system('python download_minute_price.py')
     apply_parallel_command(5, "./create_minute_price_features.py", stocks)
     
-    
     stop_high_res_price = datetime.now()
-    
 
     # update google trends download and create features
     os.system("python download_google_trends.py")
