@@ -43,6 +43,7 @@ def main():
     df['stock'] = stock
 
     # create derived features
+    df = df.sort_values('Date')
     df = create_derived_features(df)
 
     # make deltas (not to be used in training!)
@@ -56,6 +57,8 @@ def main():
 
     df = df[df['Date'] >= pd.to_datetime('2016-02-15', format='%Y-%m-%d')]
     df = df.fillna(0)
+    
+    print(df.sort_values('Date').tail(2))
 
     df.to_csv('./data/%s_features_twitter.csv' % stock, index=False)
 
@@ -116,7 +119,11 @@ def fix_tweet_timing(df, df_stock):
 
     # tweets that fall on saturday must be redirected for monday > adding 48 hours to the tweets on saturday
     df['dayweek'] = df['Datetime'].dt.dayofweek
-    df.loc[df['dayweek'] == 5, 'Datetime'] += pd.Timedelta(hours=48)
+    df.loc[df['dayweek'] == 5, 'Datetime'] += pd.DateOffset(hours=48, minutes=5)
+    
+    # remove tweets that are on sunday
+    df['dayweek'] = df['Datetime'].dt.dayofweek
+    df = df[df['dayweek'] < 5]
     df['Date'] = pd.to_datetime(df['Datetime'].dt.date, errors='coerce')
     df = df.drop(['dayweek'], axis=1)
 
@@ -194,9 +201,9 @@ def create_derived_features(df):
         df[feature + 'lag6'] = (df[feature].shift(6) + df[feature].shift(7)) / 2
         df[feature + 'lag8'] = (df[feature].shift(8) + df[feature].shift(9)) / 2
         df[feature + 'lag10'] = (df[feature].shift(10) + df[feature].shift(11)) / 2
-        df[feature + 'lag12'] = (df[feature].shift(12) + df[feature].shift(13)) / 2
-        df[feature + 'lag14'] = (df[feature].shift(14) + df[feature].shift(14)) / 2
-        df[feature + 'lag20'] = (df[feature].shift(15) + df[feature].shift(16) + df[feature].shift(17) + df[feature].shift(18) + df[feature].shift(19) + df[feature].shift(20)) / 6
+        #df[feature + 'lag12'] = (df[feature].shift(12) + df[feature].shift(13)) / 2
+        #df[feature + 'lag14'] = (df[feature].shift(14) + df[feature].shift(14)) / 2
+        #df[feature + 'lag20'] = (df[feature].shift(15) + df[feature].shift(16) + df[feature].shift(17) + df[feature].shift(18) + df[feature].shift(19) + df[feature].shift(20)) / 6
         
         df[feature + 'delta1'] = df[feature + 'lag1'] / df[feature]
         df[feature + 'delta2'] = df[feature + 'lag2'] / df[feature]
@@ -205,13 +212,13 @@ def create_derived_features(df):
         df[feature + 'delta6'] = df[feature + 'lag6'] / df[feature]
         df[feature + 'delta8'] = df[feature + 'lag8'] / df[feature]
         df[feature + 'delta10'] = df[feature + 'lag10'] / df[feature]
-        df[feature + 'delta12'] = df[feature + 'lag12'] / df[feature]
-        df[feature + 'delta14'] = df[feature + 'lag14'] / df[feature]
-        df[feature + 'delta20'] = df[feature + 'lag20'] / df[feature]
+        #df[feature + 'delta12'] = df[feature + 'lag12'] / df[feature]
+        #df[feature + 'delta14'] = df[feature + 'lag14'] / df[feature]
+        #df[feature + 'delta20'] = df[feature + 'lag20'] / df[feature]
         
         df[feature + 'delta_mean3'] = df[[feature + 'delta1', feature + 'delta2', feature + 'delta3']].mean(axis=1) / 3
         df[feature + 'delta_mean6'] = df[[feature + 'delta4', feature + 'delta6']].mean(axis=1) / 3
-        df[feature + 'delta_mean12'] = df[[feature + 'delta6', feature + 'delta8', feature + 'delta10', feature + 'delta12']].mean(axis=1) / 5
+        #df[feature + 'delta_mean12'] = df[[feature + 'delta6', feature + 'delta8', feature + 'delta10', feature + 'delta12']].mean(axis=1) / 5
         
         df[feature + 'dev_delta21'] = (df[feature + 'delta1'] / df[feature + 'delta2'])
         df[feature + 'dev_delta31'] = (df[feature + 'delta1'] / df[feature + 'delta3'])
@@ -234,7 +241,7 @@ def create_derived_features(df):
             df[feature + 'mean_3'] = (df[feature + 'lag1'] + df[feature + 'lag2'] + df[feature + 'lag3']) / 3
             df[feature + 'mean_6'] = (df[feature + 'lag1'] + df[feature + 'lag2'] + df[feature + 'lag3']
                                               + df[feature + 'lag4'] + df[feature + 'lag6']) / 6
-            df[feature + 'mean_12'] = (df[feature + 'lag8'] + df[feature + 'lag10'] + df[feature + 'lag12']) / 6
+            #df[feature + 'mean_12'] = (df[feature + 'lag8'] + df[feature + 'lag10'] + df[feature + 'lag12']) / 6
 
         if 'nb_tweet' in feature:
   
@@ -245,9 +252,9 @@ def create_derived_features(df):
             del df[feature + 'lag6']
             del df[feature + 'lag8']
             del df[feature + 'lag10']
-            del df[feature + 'lag12']
-            del df[feature + 'lag14']
-            del df[feature + 'lag20']
+            #del df[feature + 'lag12']
+            #del df[feature + 'lag14']
+            #del df[feature + 'lag20']
 
     df['delta_stock1'] = (df['Close'].shift(1) - df['Open'].shift(1)) / df['Open'].shift(1)
     df['delta_stock2'] = (df['Close'].shift(2) - df['Open'].shift(2)) / df['Open'].shift(2)
@@ -263,8 +270,6 @@ def create_derived_features(df):
     df['delta_dev_stock4'] = df['delta_stock3'] - df['delta_stock4']
     df['delta_dev_stock5'] = df['delta_stock4'] - df['delta_stock5']
     df['delta_dev_stock6'] = df['delta_stock5'] - df['delta_stock6']
-    
-    print(df.tail(1))
 
     return df
 
