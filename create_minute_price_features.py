@@ -30,13 +30,14 @@ warnings.simplefilter(action='ignore')
 def main():
 
 
-    stock = sys.argv[1]
+    #stock = sys.argv[1]
     
-    #stock = 'SPY'
+    stock = 'SPY'
     
     df = pd.read_csv('./data/TRADE_DATA/minute_data/%s.csv' % stock)
     df['Datetime'] = pd.to_datetime(df['Datetime'])
     df = df.set_index('Datetime')
+    print(df)
 
     
     # Convert to NY time
@@ -48,9 +49,6 @@ def main():
     df_delta_14_16 = get_high_res_delta(df[['open', 'trade_count']], '14:00', '16:00')
     df_delta_15_16 = get_high_res_delta(df[['open', 'trade_count']], '15:00', '16:00')
     df_delta_15h30_16 = get_high_res_delta(df[['open', 'trade_count']], '15:30', '16:00')
-    df_delta_16_17 = get_high_res_delta(df[['open', 'trade_count']], '16:00', '17:00')
-    df_delta_16_18 = get_high_res_delta(df[['open', 'trade_count']], '16:00', '18:00')
-    df_delta_16_19 = get_high_res_delta(df[['open', 'trade_count']], '16:00', '19:00')
     
     
     # compute percentage of past-time volume
@@ -75,12 +73,23 @@ def main():
     df_trade_count = df_trade_count.reset_index(drop=False)
     df_trade_count = df_trade_count[['Date', 'percentage_volume_extra_time']]
     df_trade_count['Date'] = pd.to_datetime(df_trade_count['Date'])
+    
+    
+    # get delta closing at 16h - last trade recorded
+    price_min_time = df_regular.sort_values('Datetime', ascending=True).drop_duplicates(['Date'], keep='last')[['Date', 'open']]
+    price_min_time = price_min_time.rename(columns={'open':'price_close'})
+    price_max_time = df_extra.sort_values('Datetime', ascending=True).drop_duplicates(['Date'], keep='last')[['Date', 'open']]
+    price_max_time = price_max_time.rename(columns={'open':'price_next_open'})
+    df_delta_close_next_open = price_min_time.merge(price_max_time, on='Date', how='outer')
+    df_delta_close_next_open['delta_post_closing'] = df_delta_close_next_open['price_close'] / df_delta_close_next_open['price_next_open']
+    df_delta_close_next_open = df_delta_close_next_open[['Date', 'delta_post_closing']]
+    df_delta_close_next_open['Date'] = pd.to_datetime(df_delta_close_next_open['Date'])
+
 
     # join two sources
     df_final = reduce(lambda df1, df2: pd.merge(df1, df2, on='Date', how='outer'), [df_trade_count, df_delta_14_16, df_delta_15_16, df_delta_15h30_16, 
-    												df_delta_16_17, df_delta_16_18, df_delta_16_19])
-    df_final = df_final.sort_values('Date')
-    												    
+    												df_delta_close_next_open])
+    df_final = df_final.sort_values('Date')										    
     
     # add one day since corresponding features are used next day    
     df_final['Date'] = df_final['Date'].shift(-1)
@@ -93,7 +102,7 @@ def main():
     df_final = df_final.sort_values('Date')
     df_final.to_csv('./data/%s_minute_price_features.csv' % stock, index=False)
     
-    print(df_final.tail(2))
+    print(df_final.tail(10))
     
 
     
