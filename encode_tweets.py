@@ -447,7 +447,7 @@ lmdict = {'Negative': ['abandon', 'abandoned', 'abandoning', 'abandonment', 'aba
                       'WTF', 'reversal', 'resistance', 'pullback', 'correction',
                       'sideways', 'dip', 'loss', 'divergence', 'dump', 'dumping', 'peaked', 'puke', 'selloff', 'crash', 'bubble', 'rocky',
                       'melt down', 'break', 'tank', 'tanks', 'dip', 'retail', 'fake', 'pull the rug', 'downgraded', 'shit', 'fuck',
-                      'fucked', 'blowoff', 'hope-fueled'],
+                      'fucked', 'blowoff', 'hope-fueled', 'sell off'],
           'Positive': ['able', 'abundance', 'abundant', 'acclaimed', 'accomplish', 'accomplished', 'accomplishes',
                        'accomplishing', 'accomplishment', 'accomplishments', 'achieve', 'achieved', 'achievement',
                        'achievements', 'achieves', 'achieving', 'adequately', 'advancement', 'advancements', 'advances',
