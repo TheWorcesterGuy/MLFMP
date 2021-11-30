@@ -30,9 +30,9 @@ warnings.simplefilter(action='ignore')
 def main():
 
 
-    #stock = sys.argv[1]
+    stock = sys.argv[1]
     
-    stock = 'SPY'
+    #stock = 'SPY'
     
     df = pd.read_csv('./data/TRADE_DATA/minute_data/%s.csv' % stock)
     df['Datetime'] = pd.to_datetime(df['Datetime'])
