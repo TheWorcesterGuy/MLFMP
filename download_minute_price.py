@@ -26,7 +26,7 @@ import yaml
 
 def main():
 
-	stocks = ['INTC', 'TSLA',  'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA', 'BA', 'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'JNJ', 'PG', 'NKE']
+	stocks = ['INTC', 'TSLA',  'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA', 'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG']
               
 
 	with open('credentials.yaml', 'r') as stream:

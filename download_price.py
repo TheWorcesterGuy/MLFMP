@@ -26,8 +26,8 @@ def main():
     tickers = ['^FCHI','^STOXX50E','^AEX','000001.SS','^HSI','^N225','^BSESN','^SSMI','^IBEX',
                '^VVIX','^VIX','SPY', 'QQQ','GC=F','CL=F','SI=F','EURUSD=X','JPY=X', 'XLF','XLK','XLV','XLY',
                'INTC', 'AMZN', 'FB', 'AAPL', 'DIS', 'TSLA', 'GOOG', 
-               'GOOGL', 'MSFT', 'NFLX', 'NVDA', 'BA', 'TWTR', 'AMD', 'WMT', 
-               'JPM', 'SPY', 'QQQ', 'BAC', 'JNJ', 'PG', 'NKE']
+               'GOOGL', 'MSFT', 'NFLX', 'NVDA', 'TWTR', 'AMD', 'WMT', 
+               'JPM', 'SPY', 'QQQ', 'BAC', 'PG']
     
     for ticker in tickers:
         nb_file = len(glob.glob('./data/TRADE_DATA/price_data/%s.csv' % ticker))

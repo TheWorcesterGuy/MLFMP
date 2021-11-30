@@ -20,8 +20,8 @@ def main():
     print('UPDATE DATE : %s\n\n' % update_date)
 
 
-    stocks = ['INTC', 'TSLA',  'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA', 'BA',
-              'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'JNJ', 'PG', 'NKE']
+    stocks = ['INTC', 'TSLA',  'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
+              'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG']
              
 
     google_trends = ['facebook stock', 'SPY', 'AMD', 'AAPL', 'AMZN', 'QQQ', 'TSLA', 'MSFT', 'boeing stock',
