@@ -36,11 +36,10 @@ else:
     print('Error : empty folder for %s' % google_trend)
     exit(0)
 
-# Google trends after 7:00 am (NY time) included are considered for the next day (the new midnight is 7:00 am)
+# Google trends after 8:00 am (NY time) included are considered for the next day, which means we shift forward by 16 hours
 df['date'] = df['date'].apply(lambda x: x.replace(tzinfo=None))
 df['date'] = pd.to_datetime(df['date'])
-df.loc[df['date'].dt.hour >= 7, 'date'] += pd.Timedelta(hours=18)
-
+df['date'] = df['date'] + pd.DateOffset(hours=16)
 
 # remove holidays and weekends
 df = df[df.date.dt.dayofweek < 5]

@@ -160,8 +160,8 @@ def check_update_validity():
         hour = pd.Timestamp.now(tz='US/Eastern').hour
         minute = pd.Timestamp.now(tz='US/Eastern').minute
 
-        if (hour == 7 and 20 <= minute <= 50) is False:
-            print('Downloading of Google Trends forbidden : must occur between 7:20am and 7:50am NY time only.')
+        if (hour == 8 and 30 <= minute <= 50) is False:
+            print('Downloading of Google Trends forbidden : must occur between 8:30am and 8:50am NY time only.')
             exit(0)
         else:
             pass  # update request accepted
