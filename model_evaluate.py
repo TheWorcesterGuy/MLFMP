@@ -27,9 +27,11 @@ from datetime import datetime, timedelta
 import pytz
 import time
 from email_updates_error import *
+from clean import *
 warnings.simplefilter(action = 'ignore')
 
 def main():
+    clean_features()
     print('\n Running model Evaluation \n')
     market().execute()
          
@@ -38,7 +40,7 @@ class market :
         self.verify_features_store()
         self.path = os.getcwd()
         self.price_data = pd.read_csv('./data/features_store.csv',',')
-        self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.9)).dropna()
+        self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.80))
         #Halt during pre-trading times
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
         start = nyc_datetime.replace(hour=7, minute=20, second=0,microsecond=0)
@@ -205,7 +207,7 @@ class market :
             counter += 1
             
     def threshold (self) :
-        level = 65
+        level = 67
         thresholds = np.linspace(0.5, 1, num = 101)
         accuracy = 0
         n = 0
@@ -324,7 +326,7 @@ class market :
             print('Model trade threshold is', np.round(self.model_level_live,2))
             
             n_best_models = len(glob.glob(os.getcwd() + '/Best_models/*.{}'.format('csv')))
-            pass_threshold = 55 + (n_best_models/20)
+            pass_threshold = 57 + (n_best_models/30)
             percent_days = 10/100
             print('\n Using pass threshold of', pass_threshold)
             if  (self.ROC_test > pass_threshold) &  (self.ROC_live > pass_threshold) & \

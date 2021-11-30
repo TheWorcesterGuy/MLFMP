@@ -32,12 +32,13 @@ import copy
 warnings.filterwarnings("ignore")
 
 def main():
-    os.system("python model_evaluate.py")
+    #os.system("python3 update_features_store.py")
+    #os.system("python3 model_evaluate.py")
     nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
     date_sent = nyc_datetime - pd.Timedelta("1 days")
     for j in range(0,1000):
         maker = 0
-        if j == -10 :
+        if j == 0 :
             maker = 1
             market(maker).stock_matrix()
             maker = 0
@@ -54,14 +55,14 @@ def main():
             date_sent = nyc_datetime
             print('Completed\n')
         
-        for k in range (0,10):
+        for k in range (0,20):
             market(maker).execute()
                 
         os.system("python model_evaluate.py")
         
 class market :
     def __init__(self, maker) :
-        self.verify_features_store()
+        #self.verify_features_store()
         self.possibilities =  ['INTC', 'AMZN', 'FB', 'AAPL', 'DIS', 'TSLA', 'GOOG', 'GOOGL', 
                                'MSFT', 'NFLX', 'NVDA', 'BA', 'TWTR', 'AMD', 'WMT', 'JPM', 'SPY', 'QQQ', 'BAC', 'JNJ', 'PG', 'NKE' ]
         self.path = os.getcwd()
@@ -69,10 +70,11 @@ class market :
         self.predict = random.sample(self.possibilities, 1)[0]
         self.use_n = random.randint(1, 10)
         self.price_data = pd.read_csv('./data/features_store.csv',',')
-        self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.9)).dropna()
+        self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.80))
         self.all = glob.glob(os.getcwd() + '/models/*.{}'.format('csv'))
         self.flag = 0
         self.maker = maker
+        self.flag = 0
         
         #Halt during pre-trading times
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
@@ -90,6 +92,7 @@ class market :
                 print('For', stock_a, 'Using', stock_b)
                 self.predict = stock_a
                 self.use = [stock_a, stock_b]
+                self.use = list(set(self.use))
                 self.prep()
                 self.make_model()
         os.system("python model_evaluate.py")
@@ -130,6 +133,12 @@ class market :
                         accuracy_test = record['accuracy_test'][record['model_name'] == model].iloc[0]
                         #print(model, 'Has ROC AUC of', ROC)
                         self.links[stock_a].iloc[line] = (ROC_test + accuracy_test)/2
+                    model = stock_a + '-' + stock_b + '-' + str(0)
+                    if (record['trade_accuracy_test'][record['model_name'] == model].tolist() != []) :
+                        ROC_test = record['ROC_test'][record['model_name'] == model].iloc[0]
+                        accuracy_test = record['accuracy_test'][record['model_name'] == model].iloc[0]
+                        #print(model, 'Has ROC AUC of', ROC)
+                        self.links[stock_a].iloc[line] = (ROC_test + accuracy_test)/2
                     line += 1
         
             self.links = self.links.reset_index()
@@ -149,7 +158,7 @@ class market :
         if self.maker == 0 :
             self.n_features = random.randint(30, 300)
         elif self.maker == 1 :
-            self.n_features = 100
+            self.n_features = 500
         
         return price_data.columns
     
@@ -160,7 +169,7 @@ class market :
         dates = price_data['Date']
         dates = dates.drop_duplicates()
         last_date = dates.iloc[0]
-        first_date = dates.iloc[200] 
+        first_date = dates.iloc[10] 
         price_data = price_data.loc[(price_data['Date'] < last_date)]
         self.price_data_train = price_data[price_data['stock'].isin(use)].loc[(price_data['Date'] < first_date)]
         self.price_data_test = price_data[price_data['stock'] == self.predict].loc[(price_data['Date'] >= first_date)]
@@ -175,13 +184,14 @@ class market :
         return 
         
     def make_model (self) :
-        
+        self.shaps = [0.02]
+        self.shaps  = random.choice(self.shaps)
         self.train_names = '-'.join(self.use)
         self.model = self.predict + '-' + self.train_names + '-' + str(0)
-        leaves = [450]
-        depth = [6]
-        rate = [0.01]
-        bins = [200]
+        leaves = [400]
+        depth = [4, 6]
+        rate = [0.05]
+        bins = [50]
         
         self.prep()
         y_train = self.y_train
@@ -190,7 +200,7 @@ class market :
         train_data = lgb.Dataset(X_train,label=y_train)
         param = {'num_leaves':random.choice(leaves), 'objective':'binary','max_depth':random.choice(depth),
                  'learning_rate':random.choice(rate),'max_bin':random.choice(bins),
-                 'num_threads':10, 'verbose': -1, 'is_unbalance': True}
+                 'num_threads':11, 'verbose': -1, 'is_unbalance': True}
         num_round = 100
         lgbm = lgb.train(param,train_data,num_round, verbose_eval=False)
         
@@ -199,10 +209,11 @@ class market :
         values = np.sum(np.abs(shap_values), axis=0)
         values = np.mean(values, axis=0)
         df = pd.DataFrame({'features' : self.X_test.columns, 'value' : values}).sort_values(by=['value'], ascending=False)
-        self.feature_imp = df[df['value'] != 0]
+        self.feature_imp = df[df['value']>self.shaps]
+        if np.shape(self.feature_imp)[0]>0:
+            self.parameters = lgbm.params
+            self.record()
         
-        self.parameters = lgbm.params
-        self.record()
         #If plotting wanted
         # shap.summary_plot(shap_values,self.X_test,max_display=35)
         # explainer = shap.TreeExplainer(lgbm)
@@ -211,6 +222,7 @@ class market :
         # shap_values2.values = shap_values2.values[:,:,1]
         # shap_values2.base_values = shap_values2.base_values[:,1]
         # shap.plots.beeswarm(shap_values2, max_display=35)
+        # plt.show()
         
     def record(self) :
         rec_features = glob.glob('./data/model_features.{}'.format('csv'))

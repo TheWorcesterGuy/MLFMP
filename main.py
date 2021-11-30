@@ -12,6 +12,7 @@ import time
 from datetime import datetime, timedelta
 import pytz
 from email_updates_error import *
+import glob
 
 def main():
     try:
@@ -54,7 +55,7 @@ def trade_system():
     print('Sub codes called in this system can be changed and updated outside of market hours')
     path = os.getcwd()
     days_running = 0
-    while days_running < 100 :
+    while days_running < 1 :
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
         if (nyc_datetime.weekday() != 5) and (nyc_datetime.weekday() != 6) :
             print('\n In Week trading \n')
@@ -88,7 +89,11 @@ def trade_system():
             if (nyc_datetime >= start) & (nyc_datetime < end) :
                 os.system("python3 update_features_store.py")
                 os.system("python3 reporting_features_store.py")
-                os.system("python3 trade.py > ./log/trade_log" + nyc_datetime.strftime('%Y-%m-%d') + ".txt")
+                if len(glob.glob('./data/features_store.csv')) :
+                    os.system("python3 trade.py > ./log/trade_log" + nyc_datetime.strftime('%Y-%m-%d') + ".txt")
+                else :
+                    print('\n Features store not available, sleeping until user intervention (or new cycle)')
+                    time.sleep(43200)
 
             nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
             if (nyc_datetime.weekday() == 4):

@@ -8,6 +8,7 @@ Created on Sat Nov 13 23:07:59 2021
 
 import pandas as pd
 import numpy as np
+import math
 
 
 def features_report() :
@@ -44,12 +45,16 @@ def features_report() :
     for column in features :
         line = features[column].dropna().tolist()
         line.reverse()
-        features_rotated[column] = line[:max_line]
+        if len(line) <= max_line :
+            features_rotated[column] = pd.Series(line)
+        else :
+            features_rotated[column] = line[:max_line]
         
     for ii in range(0,max_line) :
         features_present_bottom += features_rotated.iloc[ii].tolist()
     
-    features_present_bottom = list(set(features_present_bottom))
+    features_present_bottom =list(set(features_present_bottom))
+    features_present_bottom = [x for x in features_present_bottom if type(x) == str]
     df = pd.DataFrame({'Features':features_present_bottom})
     
     for ii in range(0,max_line) :

@@ -30,8 +30,11 @@ warnings.simplefilter(action = 'ignore')
 
 def main():
     print('\n Evaluating recorded models \n')
-    #Status takes : 'all', 'Archived', 'Deleted', 'Selected', 'xall'
+
     evaluation().charts()
+    #evaluation().variable()
+    #evaluation().money()
+    #evaluation().models_selected()
     #evaluation().results_traded()
     #evaluation().results_predicted()
     #evaluation().optimizer()
@@ -42,9 +45,10 @@ class evaluation :
         record = record.drop_duplicates(subset=['model_name'], keep='last')
         record['date'] = pd.to_datetime(record['date'])
         today = datetime.now()
-        recent = today - timedelta(days=2)
+        recent = today - timedelta(days=1)
         record = record[record['date'] > recent]
         self.record = record.dropna()
+        
         
     def charts (self):
         
@@ -55,9 +59,9 @@ class evaluation :
         record = record[record['days_traded_live'] > int(100*percentage_days)]
         
         #record = record[record['status'] > 0]
-        accuracy_test = sorted(record['trade_accuracy_test'].to_list())#[:-5]
+        accuracy_test = sorted(record['trade_accuracy_test'].to_list())[:-5]
         accuracy_live = record['trade_accuracy_live'].to_list()
-        ROC_live = sorted(record['ROC_test'].to_list())#[:-5]
+        ROC_test = sorted(record['ROC_test'].to_list())[:-5]
         
         mean_live_thr = []
         mean_live_perf = []
@@ -70,7 +74,7 @@ class evaluation :
         mean_live_ROC_thr = []
         mean_live_ROC_perf = []
         std_live_ROC_thr = []
-        for value in ROC_live :
+        for value in ROC_test :
             mean_live_ROC_thr.append(np.mean(record['trade_accuracy_live'][record['ROC_test'] > value].to_list()))
             std_live_ROC_thr.append(np.std(record['trade_accuracy_live'][record['ROC_test'] > value].to_list()))
             mean_live_ROC_perf.append(np.mean(record['model_performance_live'][record['ROC_test'] > value].to_list()))
@@ -87,7 +91,7 @@ class evaluation :
         plt.title('Mean live accuracy over ROC threshold')
         plt.xlabel('Test ROC threshold')
         plt.ylabel('Mean live accuracy above threshold')
-        plt.plot(ROC_live, mean_live_ROC_thr, 'o')
+        plt.plot(ROC_test, mean_live_ROC_thr, 'o')
         plt.show()
         
         # plt.title('Standard deviation of performance over threshold')
@@ -105,7 +109,89 @@ class evaluation :
         plt.title('Trading results over ROC threshold')
         plt.xlabel('Test ROC threshold')
         plt.ylabel('Live results over threshold')
-        plt.plot(ROC_live, mean_live_ROC_perf, 'o')
+        plt.plot(ROC_test, mean_live_ROC_perf, 'o')
+        plt.show()
+
+    def variable(self):    
+        record = pd.read_csv('./data/record_model.csv').dropna()
+        accuracy_test = np.array(record['trade_accuracy_test'].to_list())#[:-5]
+        accuracy_live = np.array(record['trade_accuracy_live'].to_list())
+        ROC_live = np.array(record['ROC_live'].to_list())#[:-5]
+        ROC_test = np.array(record['ROC_test'].to_list())
+        metric = (accuracy_test + accuracy_live + ROC_live + ROC_test)/4
+        #metric = accuracy_live
+        
+        # plt.figure()
+        # models = record['model_name'].tolist()
+        # values = [float(x.split('-')[-1]) for x in models]
+        # df = pd.DataFrame({'shaps' : values, 'metric': metric})
+        # df = df[df['shaps']>0]
+        # df = df.groupby(['shaps']).mean().reset_index()
+        # plt.plot(np.array(df['shaps']),np.array(df['metric']),'o')
+        # plt.xscale('log')
+        # plt.xlabel('Shaps level')
+        # plt.ylabel('metric')
+        # plt.show
+        
+        plt.figure()
+        record = pd.read_csv('./data/record_model.csv').dropna()
+        parameters = record.parameters.to_list()
+        learning_rate = [eval(x)[3][1] for x in parameters]
+        df = pd.DataFrame({'learning rate' : learning_rate, 'metric': metric})
+        df = df.groupby(['learning rate']).mean().reset_index()
+        plt.plot(np.array(df['learning rate']),np.array(df['metric']),'o')
+        plt.xlabel('learning rate')
+        plt.xscale('log')
+        plt.ylabel('metric')
+        plt.show
+        
+        plt.figure()
+        record = pd.read_csv('./data/record_model.csv').dropna()
+        parameters = record.parameters.to_list()
+        bins = [eval(x)[4][1] for x in parameters]
+        df = pd.DataFrame({'bins' : bins, 'metric': metric})
+        df = df.groupby(['bins']).mean().reset_index()
+        plt.plot(np.array(df['bins']),np.array(df['metric']),'o')
+        plt.xlabel('bins')
+        plt.ylabel('metric')
+        plt.show
+        
+    def money(self) :
+        
+        df = pd.read_csv('./data/record_model.csv').dropna()
+        plt.figure()
+        df = df.groupby(['accuracy_live']).mean().reset_index()
+        plt.plot(np.array(df['accuracy_live']),np.array(df['model_performance_live']),'o')
+        plt.xlabel('Live accuracy')
+        plt.ylabel('Performance')
+        plt.show
+        
+        df = pd.read_csv('./data/record_model.csv').dropna()
+        plt.figure()
+        df = df.groupby(['ROC_live']).mean().reset_index()
+        plt.plot(np.array(df['ROC_live']),np.array(df['model_performance_live']),'o')
+        plt.xlabel('Live ROC')
+        plt.ylabel('Performance')
+        plt.show
+        
+        df = pd.read_csv('./data/record_model.csv').dropna()
+        plt.figure()
+        df = df.groupby(['ROC_live']).mean().reset_index()
+        plt.plot((np.array(df['ROC_live'])+np.array(df['accuracy_live']))/2,np.array(df['model_performance_live']),'o')
+        plt.xlabel('metric')
+        plt.ylabel('Performance')
+        plt.show
+        
+    def models_selected(self):
+        record = pd.read_csv('./data/record_model.csv').dropna()
+        record = record[record['status']==1]
+        record = record.groupby(['date']).sum().reset_index()
+        record['date'] = pd.to_datetime(record['date']) 
+        plt.figure()
+        plt.plot(record['date'],record['status'],'o')
+        plt.xticks(rotation='vertical')
+        plt.xlabel('Date')
+        plt.ylabel('Number of good models')
         plt.show()
 
     def results_traded(self) :
