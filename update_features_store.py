@@ -136,6 +136,8 @@ def merge_files(stocks):
         df_mood_trend = pd.read_csv('./data/GOOGLE_TRENDS/mood_features_g.csv')
         df = df.merge(df_mood_trend, on='Date', how='inner')
         os.system('rm ./data/GOOGLE_TRENDS/mood_features_g.csv')
+        
+    os.system('rm ./data/*_minute_price_features.csv")
 
     df = df.sort_values('Date', ascending=False)
 
