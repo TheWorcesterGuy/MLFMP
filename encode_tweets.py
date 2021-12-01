@@ -54,7 +54,7 @@ def main():
             # remove duplicated tweets
             enc_df['Date'] = pd.to_datetime(enc_df['Datetime'].dt.date)
             enc_df = enc_df.drop_duplicates(subset=['Text', 'Date'])
-            enc_df = enc_df.drop(['Text', 'Date'], axis=1)
+            enc_df = enc_df.drop(['Date'], axis=1)
 
             enc_df['Cleaned_Text'] = enc_df.apply(lambda row: clean_text(row), axis=1)
             enc_df['Cleaned_Text'] = enc_df['Cleaned_Text'].astype(str)
