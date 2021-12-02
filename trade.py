@@ -40,11 +40,10 @@ class trade :
             Get current working folder path.
         """
         
-        #self.verify_features_store()
         files = glob.glob('*.{}'.format('csv'))
         self.price_data = pd.read_csv('./data/features_store.csv')
         self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.95)).dropna()
-
+        self.flag_error = 0
         self.path = os.getcwd()
         data = pd.DataFrame({'Date' : [], 'Products' : [], 
                     'Probabilities': [], 'Model_level': []})
@@ -69,21 +68,6 @@ class trade :
         print('Sub-code sleeping until user kill')
         time.sleep(10000000)
               
-    def verify_features_store(self):
-        """Class function used to check the recency of data in the features store, older then 10 day data will generate an error message 
-
-        Attributes
-        -----------
-        `self.error_handling()` : Function call
-            Class function to deal with a raised error"
-        """
-        price_data = pd.read_csv('./data/features_store.csv',',')
-        price_data['Date'] = pd.to_datetime(price_data['Date'])
-        today = datetime.today()
-        if price_data['Date'].iloc[0] != today.date() :
-            error_message = "The features store has not been updated until todays date or there is missing data, this is evaluated as a fatal error as it can lead to incorrect predictions"
-            self.error_handling(error_message)
-    
     def cp_models(self) :
         """Class function used to copy best models from './Best_models' to './models_in_use'. This is to avoid conflict between model test and model usage
 
@@ -125,21 +109,25 @@ class trade :
         price_data = self.price_data
         use = self.use 
         price_data['Date'] = pd.to_datetime(price_data['Date']) # Convert date column to datetime format for subsequent date selection 
-        today = self.price_data['Date'].iloc[0] # Extract last date in features store, which sould correspond to todays date                     
-        print('Todays features date is %s' %today)
-        #add assert that date time is a datetime and not object
-        self.price_data_train = price_data[price_data['stock'].isin(use)].loc[(price_data['Date'] < today)]    
-        price_data_test = price_data[price_data['stock'] == self.predict].loc[(price_data['Date'] >= today)] # Extract data for stock to be predicted
+        today = price_data['Date'][price_data['stock']==self.predict].iloc[0] # Extract last date in features store, which sould correspond to todays date                     
+        print('Todays features date is %s' %today.date())
         
-        self.y_train = self.price_data_train['delta_class'].tolist() # Extract all outcomes for training
+        if today.date() != datetime.today().date():
+            self.flag_error = 1
+            print(self.predict, 'is not up to date, it will be skipped')
+        else :
+            self.price_data_train = price_data[price_data['stock'].isin(use)].loc[(price_data['Date'] < today)]    
+            price_data_test = price_data[price_data['stock'] == self.predict].loc[(price_data['Date'] >= today)] # Extract data for stock to be predicted
             
-        self.features_name = record[self.model.replace(".csv", "")].dropna().tolist() 
-        self.features_name = [x for x in self.features_name if x in price_data.columns] # Account for potential feature store modifications, WARNING this can lead weaker predictions
-        self.X_train = self.price_data_train[self.features_name] # Load as class attribute the train set
-        self.X_test = price_data_test[self.features_name] # Load as class attribute todays data for the stock to predict
-        print('\n The folowing stock will predicted using the adjacent features :')
-        print(self.X_test)
-        print('\n')
+            self.y_train = self.price_data_train['delta_class'].tolist() # Extract all outcomes for training
+                
+            self.features_name = record[self.model.replace(".csv", "")].dropna().tolist() 
+            self.features_name = [x for x in self.features_name if x in price_data.columns] # Account for potential feature store modifications, WARNING this can lead weaker predictions
+            self.X_train = self.price_data_train[self.features_name] # Load as class attribute the train set
+            self.X_test = price_data_test[self.features_name] # Load as class attribute todays data for the stock to predict
+            print('\n The folowing stock will predicted using the adjacent features :')
+            print(self.X_test)
+            print('\n')
 
         return 
     
@@ -171,7 +159,8 @@ class trade :
         data = pd.read_csv('./data/trade_data.csv')
         today = datetime.today()
         df = pd.DataFrame({'Date' : today.strftime('%Y - %m - %d'), 'Products' : self.predict, 
-                    'Probabilities': [self.prediction[0]], 'Model_level': [self.model_level], 'Model_performance': [self.model_performance]})
+                    'Probabilities': [self.prediction[0]], 'Model_level_p': [self.model_level_p], 'Model_level_n': [self.model_level_n],
+                    'Model_performance': [self.model_performance]})
         data = data.append(df, ignore_index=True)
         data.to_csv('./data/trade_data.csv', index = False)
         
@@ -215,7 +204,8 @@ class trade :
         for stock in stocks:
             data_stock = data[data['Products'] == stock]
             probability = data_stock['Probabilities'][data_stock['Products'] == stock].tolist() 
-            level = data_stock['Model_level'][data_stock['Products'] == stock].tolist()
+            level_p = data_stock['Model_level_p'][data_stock['Products'] == stock].tolist()
+            level_n = data_stock['Model_level_n'][data_stock['Products'] == stock].tolist()
             performance = data_stock['Model_performance'][data_stock['Products'] == stock].tolist()
             
             side = np.array([])
@@ -224,15 +214,15 @@ class trade :
             prob = np.array([])
             model_performance = np.array([])
             for i in range(len(probability)) :
-                if (probability[i] > 0.5) & (probability[i] > level[i]):
+                if (probability[i] > 0.5) & (probability[i] > level_p[i]):
                     side = np.append(side, 1)
-                    prob_distance = np.append(prob_distance, probability[i] - level[i])
+                    prob_distance = np.append(prob_distance, probability[i] - level_p[i])
                     product = np.append(product, stock)
                     prob = np.append(prob, probability[i])
                     model_performance = np.append(model_performance, 0.01*performance[i]/(1-performance[i]*0.01))
-                if (probability[i] < 0.5) & ((1-probability[i]) > level[i]):
+                if (probability[i] < 0.5) & ((1-probability[i]) > level_n[i]):
                     side = np.append(side, -1)
-                    prob_distance = np.append(prob_distance, (1-probability[i]) - level[i])
+                    prob_distance = np.append(prob_distance, (1-probability[i]) - level_n[i])
                     product = np.append(product, stock)
                     prob = np.append(prob, probability[i])
                     model_performance = np.append(model_performance, 0.01*performance[i]/(1-performance[i]*0.01))
@@ -260,7 +250,8 @@ class trade :
         record = pd.read_csv('./data/record_model.csv')
         record = record.drop_duplicates(subset=['model_name'], keep='last')
         record = record[record['model_name'] == model]
-        self.model_level = np.round(record['model_level_live'].iloc[0],2)
+        self.model_level_p = np.round(record['model_level_live_p'].iloc[0],2)
+        self.model_level_n = np.round(record['model_level_live_n'].iloc[0],2)
         self.model_performance = np.round(record['trade_accuracy_live'].iloc[0],2)
 
     def layout(self, model) :
@@ -402,14 +393,16 @@ class trade :
         
         self.cp_models()
         for mdl in self.modellist :
+            self.flag_error = 0
             print(mdl)
             self.layout(mdl)
             print('Model for : ', self.model)
             self.prep()
-            self.model_prediction()
-            self.model_info(mdl)
-            self.pre_trade_data()
-        
+            if not self.flag_error :
+                self.model_prediction()
+                self.model_info(mdl)
+                self.pre_trade_data()
+            
         self.trade_data()
         os.system("python alpaca_trading.py")
         

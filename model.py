@@ -33,12 +33,12 @@ warnings.filterwarnings("ignore")
 
 def main():
     #os.system("python3 update_features_store.py")
-    #os.system("python3 model_evaluate.py")
+    os.system("python3 model_evaluate.py")
     nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
     date_sent = nyc_datetime - pd.Timedelta("1 days")
     for j in range(0,1000):
         maker = 0
-        if j == 0 :
+        if j == -10 :
             maker = 1
             market(maker).stock_matrix()
             maker = 0
@@ -64,7 +64,7 @@ class market :
     def __init__(self, maker) :
         #self.verify_features_store()
         self.possibilities =  ['INTC', 'AMZN', 'FB', 'AAPL', 'DIS', 'TSLA', 'GOOG', 'GOOGL', 
-                               'MSFT', 'NFLX', 'NVDA', 'BA', 'TWTR', 'AMD', 'WMT', 'JPM', 'SPY', 'QQQ', 'BAC', 'JNJ', 'PG', 'NKE' ]
+                               'MSFT', 'NFLX', 'NVDA', 'TWTR', 'AMD', 'WMT', 'JPM', 'SPY', 'QQQ', 'BAC', 'PG']
         self.path = os.getcwd()
         self.n_iter = 5
         self.predict = random.sample(self.possibilities, 1)[0]

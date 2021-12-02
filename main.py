@@ -55,7 +55,7 @@ def trade_system():
     print('Sub codes called in this system can be changed and updated outside of market hours')
     path = os.getcwd()
     days_running = 0
-    while days_running < 1 :
+    while days_running < 100 :
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
         if (nyc_datetime.weekday() != 5) and (nyc_datetime.weekday() != 6) :
             print('\n In Week trading \n')
@@ -64,11 +64,11 @@ def trade_system():
             start = nyc_datetime.replace(hour=8, minute=35, second=0,microsecond=0)
             if (nyc_datetime < start):
                 nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-                intermediate = nyc_datetime.replace(hour=7, minute=21, second=0,microsecond=0)
+                intermediate = nyc_datetime.replace(hour=8, minute=0, second=0,microsecond=0)
                 difference = intermediate - nyc_datetime
-                print('\n Sleeping before google update', round((difference.seconds/60)/60,3), 'hours\n')
+                print('\n Sleeping before first update', round((difference.seconds/60)/60,3), 'hours\n')
                 time.sleep(difference.seconds+1)
-                print('\n updating features store for google \n')
+                print('\n updating features store \n')
                 os.system("python3 update_features_store.py")
                 nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
                 start = nyc_datetime.replace(hour=8, minute=35, second=1,microsecond=0)
@@ -87,8 +87,8 @@ def trade_system():
             start = nyc_datetime.replace(hour=8, minute=35, second=0,microsecond=0)
             end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
             if (nyc_datetime >= start) & (nyc_datetime < end) :
-                os.system("python3 update_features_store.py")
-                os.system("python3 reporting_features_store.py")
+                #os.system("python3 update_features_store.py")
+                #os.system("python3 reporting_features_store.py")
                 if len(glob.glob('./data/features_store.csv')) :
                     os.system("python3 trade.py > ./log/trade_log" + nyc_datetime.strftime('%Y-%m-%d') + ".txt")
                 else :

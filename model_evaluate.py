@@ -68,7 +68,7 @@ class market :
         
         record_model_available = len(glob.glob('./data/record_model.csv'))
         if not record_model_available :
-            record = pd.DataFrame(columns=['date', 'model_name', 'stock', 'used', 'parameters', 'accuracy_test', 'ROC_test','trade_accuracy_test','days_traded_test', 'model_level_test', 'market_performance_test','model_performance_test', 'accuracy_live', 'ROC_live','trade_accuracy_live', 'days_traded_live','model_level_live', 'market_performance_live','model_performance_live','status'])
+            record = pd.DataFrame(columns=['date', 'model_name', 'stock', 'used', 'parameters', 'accuracy_test', 'ROC_test','trade_accuracy_test','days_traded_test', 'model_level_test_n','model_level_test_p', 'market_performance_test','model_performance_test', 'accuracy_live', 'ROC_live','trade_accuracy_live', 'days_traded_live','model_level_live_n','model_level_live_p', 'market_performance_live','model_performance_live','status'])
             record.to_csv('./data/record_model.csv', index = False)  
         
     def files (self) :
@@ -121,12 +121,12 @@ class market :
                             'parameters' : str(list(self.parameters.items())), 
                             'accuracy_test' : [np.round(self.accuracy_test,2)], 'ROC_test': [np.round(self.ROC_test,2)], 
                             'trade_accuracy_test' : [np.round(self.accuracy_test_trade,2)], 'days_traded_test' : [self.days_test], 
-                            'model_level_test' : [np.round(self.model_level_test,2)], 'market_performance_test' : [np.round(self.market_test,2)], 
-                            'model_performance_test' : [np.round(self.account_test,2)], 
+                            'model_level_test_p' : [np.round(self.model_level_test_p,2)], 'model_level_test_n' : [np.round(self.model_level_test_n,2)],
+                            'market_performance_test' : [np.round(self.market_test,2)], 'model_performance_test' : [np.round(self.account_test,2)], 
                             'accuracy_live' : [np.round(self.accuracy_live,2)], 'ROC_live': [np.round(self.ROC_live,2)], 
                             'trade_accuracy_live' : [np.round(self.accuracy_live_trade,2)], 'days_traded_live' : [self.days_live], 
-                            'model_level_live' : [np.round(self.model_level_live,2)], 'market_performance_live' : [np.round(self.market_live,2)], 
-                            'model_performance_live' : [np.round(self.account_live,2)], 
+                            'model_level_live_p' : [np.round(self.model_level_live_p,2)], 'model_level_live_n' : [np.round(self.model_level_live_n,2)],
+                            'market_performance_live' : [np.round(self.market_live,2)], 'model_performance_live' : [np.round(self.account_live,2)], 
                             'status' : [self.test]})
         
         record = record.append(rec, ignore_index=True)
@@ -207,35 +207,54 @@ class market :
             counter += 1
             
     def threshold (self) :
-        level = 67
-        thresholds = np.linspace(0.5, 1, num = 101)
-        accuracy = 0
-        n = 0
-        accuracies = []
-        accuracy = 0
+        level = 0.7
+        thresholds = np.linspace(0.5, 1, num = 1000)
+        accuracy_n, accuracy_p = 0 , 0
         
-        while accuracy < level :
+        #Positive side
+        n = 0
+        while accuracy_p < level :
             pred_level = []
             true_level = []
-            top = round(thresholds[n],2)
-            bottom = round(1 - thresholds[n],2)
+            top = round(thresholds[n],5)
+            i = 0
+            for prob in self.proba :
+                if prob > top :
+                    pred_level.extend([1])
+                    true_level.extend([self.y_test[i]])
+                i += 1
+            accuracy_p = round(accuracy_score(true_level, pred_level, normalize = True),2)
+            level_p = thresholds[n]
+            if n == len(thresholds) - 1:
+                break
+            else :
+                n += 1
+        
+        #negative side
+        n = 0
+        while accuracy_n < level :
+            pred_level = []
+            true_level = []
+            bottom = round(1 - thresholds[n],5)
             i = 0
             for prob in self.proba :
                 if prob < bottom :
                     pred_level.extend([-1])
                     true_level.extend([self.y_test[i]])
-                if prob > top :
-                    pred_level.extend([1])
-                    true_level.extend([self.y_test[i]])
                 i += 1
-            accuracies.extend([round(accuracy_score(true_level, pred_level, normalize = True) * 100.0,2)])
-            accuracy = accuracies[-1]
+            accuracy_n = round(accuracy_score(true_level, pred_level, normalize = True),2)
+            level_n = thresholds[n]
             if n == len(thresholds) - 1:
                 break
             else :
                 n += 1
-
-        return thresholds[n]
+                
+        if np.isnan(level_p):
+            level_p = 1
+        if np.isnan(level_n):
+            level_n = 1
+            
+        return level_p, level_n
     
     def ml_model(self):
         train_data = lgb.Dataset(self.X_train,label=self.y_train)
@@ -282,7 +301,7 @@ class market :
             self.accuracy_test_trade = accuracy_score(self.y_true_trade, self.y_trade, normalize = True) * 100.0
             self.ROC_test = roc_auc_score(correct, self.proba) * 100
             self.days_test = len(self.y_trade)
-            self.model_level_test = self.threshold()
+            self.model_level_test_p, self.model_level_test_n = self.threshold()
             
             print ('\nThe metrics over the test are : ')
             print('Model accuracy is :', np.round(self.accuracy_test,2))
@@ -290,7 +309,8 @@ class market :
             print('Model accuracy over 55% is :', np.round(self.accuracy_test_trade,2))
             print('Model ROC AUC is :', np.round(self.ROC_test,2))
             print('Traded', np.round(int(self.days_test),2), 'days')
-            print('Model trade threshold is', np.round(self.model_level_test,2))
+            print('Model trade threshold positice side is', np.round(self.model_level_test_p*100,2))
+            print('Model trade threshold negative side is', np.round(self.model_level_test_n*100,2))
             
             self.prediction = []
             correct = []
@@ -315,7 +335,7 @@ class market :
             self.accuracy_live_trade = accuracy_score(self.y_true_trade, self.y_trade, normalize = True) * 100.0
             self.ROC_live = roc_auc_score(correct, self.proba) * 100
             self.days_live = len(self.y_trade)
-            self.model_level_live = self.threshold()
+            self.model_level_live_p, self.model_level_live_n = self.threshold()
             
             print ('\nThe metrics over the live test are : ')
             print('Model accuracy is :', np.round(self.accuracy_live,2))
@@ -323,12 +343,13 @@ class market :
             print('Model accuracy over 55% is :', np.round(self.accuracy_live_trade,2))
             print('Model ROC AUC is :', np.round(self.ROC_live,2))
             print('Traded', np.round(int(self.days_live),2), 'days')
-            print('Model trade threshold is', np.round(self.model_level_live,2))
+            print('Model trade threshold positive side is', np.round(self.model_level_live_p*100,2))
+            print('Model trade threshold negative side is', np.round(self.model_level_live_n*100,2))
             
             n_best_models = len(glob.glob(os.getcwd() + '/Best_models/*.{}'.format('csv')))
             pass_threshold = 57 + (n_best_models/30)
             percent_days = 10/100
-            print('\n Using pass threshold of', pass_threshold)
+            print('\n Using pass threshold of', np.round(pass_threshold,2))
             if  (self.ROC_test > pass_threshold) &  (self.ROC_live > pass_threshold) & \
                     (self.accuracy_test_trade > pass_threshold) & (self.accuracy_live_trade > pass_threshold) & \
                         (self.days_test > int(150*percent_days)) & (self.days_live > int(100*percent_days)) :
