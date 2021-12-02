@@ -62,8 +62,8 @@ def main():
     print(df)
     print('features store updated')
 
-    os.system("rm ./data/*features_trading.csv")
-    os.system("rm ./data/*features_twitter.csv")
+    #os.system("rm ./data/*features_trading.csv")
+    #os.system("rm ./data/*features_twitter.csv")
 
     stop = datetime.now()
     
@@ -115,7 +115,7 @@ def merge_files(stocks):
             df_merged = reduce(lambda left, right: pd.merge(left, right, on=['Date'],
                                                             how='inner'), [df_price, df_twitter, df_minute_price, df_trend])
             df_list.append(df_merged)
-            os.system(" rm './data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv'" % (stock, stock))
+            #os.system(" rm './data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv'" % (stock, stock))
         else:
             df_merged = reduce(lambda left, right: pd.merge(left, right, on=['Date'],
                                                             how='inner'), [df_price, df_twitter, df_minute_price])
@@ -137,7 +137,7 @@ def merge_files(stocks):
         df = df.merge(df_mood_trend, on='Date', how='inner')
         os.system('rm ./data/GOOGLE_TRENDS/mood_features_g.csv')
         
-    os.system('rm ./data/*_minute_price_features.csv')
+    #os.system('rm ./data/*_minute_price_features.csv')
 
     df = df.sort_values('Date', ascending=False)
 
