@@ -46,8 +46,8 @@ class features:
         World_tickers = ['^FCHI','^STOXX50E','^AEX','000001.SS','^HSI','^N225','^BSESN','^SSMI','^IBEX']
         Reinforce_tickers = ['^VVIX','^VIX','SPY', 'QQQ','GC=F','CL=F','SI=F','EURUSD=X','JPY=X',
                      'XLF','XLK','XLV','XLY', 'INTC', 'AMZN', 'FB', 'AAPL', 'DIS', 'TSLA', 'GOOG', 
-                     'GOOGL', 'MSFT', 'NFLX', 'NVDA', 'BA', 'TWTR', 'AMD', 'WMT', 
-                     'JPM',  'BAC', 'JNJ', 'PG', 'NKE']
+                     'GOOGL', 'MSFT', 'NFLX', 'NVDA', 'TWTR', 'AMD', 'WMT', 
+                     'JPM',  'BAC', 'PG']
 
         combinations = [0, 1, 2, 3, 5, 7, 10, 15, 20, 50]
         
