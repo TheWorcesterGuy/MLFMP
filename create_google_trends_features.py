@@ -25,6 +25,7 @@ print('Encoding google trends for %s ...' % google_trend)
 files = glob.glob("./data/GOOGLE_TRENDS/%s/*.csv" % google_trend)
 files = [file for file in files if 'encoded' not in file]
 
+
 if len(files) > 0:
     list_gt = [pd.read_csv(file, lineterminator='\n') for file in files]
     df = pd.concat(list_gt, axis=0)
@@ -66,7 +67,7 @@ for col in df.columns[1:]:
 
 
 # Replace 0s by -0.1 (so that whole days of zeros are negative but punctual zeros don't have any impact)
-df.loc[df[google_trend] == 0, google_trend] = -0.1
+df.loc[df[df.columns[1:].tolist()].sum(axis=1) == 0, df.columns[1:].tolist()] = -0.1
 
 # Average Google trends daily
 df['date'] = df['date'].dt.date
@@ -75,22 +76,37 @@ df = df.groupby('date', as_index=False).mean()
 
 # Rename stock names with generic name 'stock'
 for col in df.columns:
-    if col in ['facebook stock', 'SPY', 'AMD', 'AAPL', 'AMZN', 'QQQ', 'TSLA', 'MSFT', 'boeing stock',
+    if col in ['facebook stock', 'SPY', 'AMD', 'AAPL', 'AMZN', 'QQQ', 'TSLA', 'MSFT',
                'INTC', 'DIS', 'JPM', 'WMT', 'NFLX', 'GOOG', 'GOOGL', 'NVDA', 'TWTR']:
         df.rename(columns={col: 'stock'}, inplace=True)
 
 # Create delta features
-for col in df.columns[1:]:
+# for couple keywords
+if google_trend == 'bullish_bearish':
+    df['delta_bullish_bearish'] = df['bullish'] - df['bearish']
+    for col in df.columns[1:]:
 
-    df['GT_%s_delta1' % col] = (df[col] - df[col].shift(1)) / (df[col].shift(1) + 1)
-    df['GT_%s_delta2' % col] = (df[col] - df[col].shift(2)) / (df[col].shift(2) + 1)
-    df['GT_%s_delta3' % col] = (df[col] - df[col].shift(3)) / (df[col].shift(3) + 1)
-    df['GT_%s_delta4' % col] = (df[col] - df[col].shift(4)) / (df[col].shift(4) + 1)
-    df['GT_%s_delta1_smooth' % col] = (df[col] + df[col].shift(1)) / (df[col].shift(2) + df[col].shift(3) + 1)
-    df['GT_%s_delta2_smooth' % col] = (df[col].shift(2) + df[col].shift(3)) / (df[col].shift(4) + df[col].shift(5) + 1)
-    df['GT_%s' % col] = df[col]
-    del df[col]
-    
+        df['GT_%s_delta1' % col] = (df[col] - df[col].shift(1)) / (df[col].shift(1) + 1)
+        df['GT_%s_delta2' % col] = (df[col] - df[col].shift(2)) / (df[col].shift(2) + 1)
+        df['GT_%s_delta3' % col] = (df[col] - df[col].shift(3)) / (df[col].shift(3) + 1)
+        df['GT_%s_delta4' % col] = (df[col] - df[col].shift(4)) / (df[col].shift(4) + 1)
+        df['GT_%s_delta1_smooth' % col] = (df[col] + df[col].shift(1)) / (df[col].shift(2) + df[col].shift(3) + 1)
+        df['GT_%s_delta2_smooth' % col] = (df[col].shift(2) + df[col].shift(3)) / (df[col].shift(4) + df[col].shift(5) + 1)
+        df['GT_%s' % col] = df[col]
+
+
+# for single keywords:
+else:
+    for col in df.columns[1:]:
+        df['GT_%s_delta1' % col] = (df[col] - df[col].shift(1)) / (df[col].shift(1) + 1)
+        df['GT_%s_delta2' % col] = (df[col] - df[col].shift(2)) / (df[col].shift(2) + 1)
+        df['GT_%s_delta3' % col] = (df[col] - df[col].shift(3)) / (df[col].shift(3) + 1)
+        df['GT_%s_delta4' % col] = (df[col] - df[col].shift(4)) / (df[col].shift(4) + 1)
+        df['GT_%s_delta1_smooth' % col] = (df[col] + df[col].shift(1)) / (df[col].shift(2) + df[col].shift(3) + 1)
+        df['GT_%s_delta2_smooth' % col] = (df[col].shift(2) + df[col].shift(3)) / (
+                    df[col].shift(4) + df[col].shift(5) + 1)
+        df['GT_%s' % col] = df[col]
+        del df[col]
 
 # Drop first nans due to shifts:
 df = df.rename(columns={'date': 'Date'})

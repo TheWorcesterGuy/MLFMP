@@ -19,14 +19,13 @@ def main():
     update_date = datetime.today().strftime('%Y-%m-%d')
     print('UPDATE DATE : %s\n\n' % update_date)
 
-
     stocks = ['INTC', 'TSLA',  'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
               'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG']
-             
 
-    google_trends = ['facebook stock', 'SPY', 'AMD', 'AAPL', 'AMZN', 'QQQ', 'TSLA', 'MSFT', 'boeing stock',
+    google_trends_dir = ['facebook stock', 'SPY', 'AMD', 'AAPL', 'AMZN', 'QQQ', 'TSLA', 'MSFT',
                      'INTC', 'DIS', 'JPM', 'WMT', 'NFLX', 'GOOG', 'GOOGL', 'NVDA', 'TWTR',
-                     'debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk']
+                     'debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk',
+                         'investing.com', 'bullish_bearish']
 
     start = datetime.now()
     t0 = time.time()
@@ -39,7 +38,7 @@ def main():
 
     # update google trends download and create features
     os.system("python download_google_trends.py")
-    apply_parallel_command(10, "./create_google_trends_features.py", google_trends)
+    apply_parallel_command(10, "./create_google_trends_features.py", google_trends_dir)
 
     stop_google_trends = datetime.now()
 

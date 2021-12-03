@@ -9,24 +9,22 @@ import datetime as dt
 
 
 # CHECK ON THE GOOGLE TRENDS DATA
-google_trends = ['facebook stock', 'SPY', 'AMD', 'AAPL', 'AMZN', 'QQQ', 'TSLA', 'MSFT', 'boeing stock',
+google_trends_dir = ['facebook stock', 'SPY', 'AMD', 'AAPL', 'AMZN', 'QQQ', 'TSLA', 'MSFT',
                  'INTC', 'DIS', 'JPM', 'WMT', 'NFLX', 'GOOG', 'GOOGL', 'NVDA', 'TWTR',
-                 'debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk']
+                 'debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk',
+                     'bullish_bearish', 'investing.com']
 
 
 df_last_google_trends = []
-for google_trend in google_trends:
+for google_trend in google_trends_dir:
     last_file = None
     print(google_trend)
     files = glob.glob('./data/GOOGLE_TRENDS/%s/*.csv' % google_trend)
-    print(files)
     for file in files:
         if str(datetime.today().month) in file and str(datetime.today().year) in file:
             last_file = file
 
     df_last_google = pd.read_csv(last_file)
-    print(last_file)
-    print(df_last_google )
     df_last_google = df_last_google.sort_values('date').tail(1)
     df_last_google['stock'] = df_last_google.columns[1]
     df_last_google['value'] = df_last_google[df_last_google.columns[1]]
@@ -34,7 +32,6 @@ for google_trend in google_trends:
     df_last_google = df_last_google[['date', 'stock', 'value', 'isPartial']]
     df_last_google = df_last_google.rename(columns={'date': 'last_datetime'})
     df_last_google_trends.append(df_last_google)
-    print('\n\n')
 
 df = pd.concat(df_last_google_trends, axis=0)
 df.to_csv('./log/google_trend_data_check.csv', index=False)
