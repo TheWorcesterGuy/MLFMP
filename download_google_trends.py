@@ -19,7 +19,7 @@ from pathlib import Path
 
 def main():
 
-    waiting_time = 25
+    waiting_time = 27
     n_days = 14
 
     # Check if Google Trend update is allowed

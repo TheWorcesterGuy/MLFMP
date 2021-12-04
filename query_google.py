@@ -40,7 +40,7 @@ time_ref = pd.date_range("%s-%s-%s 00:00:00" % (year_start, month_start, day_sta
                          "%s-%s-%s 00:00:00" % (year_end, month_end, day_end), freq="1H") \
                                 .to_frame(name='date').reset_index(drop=True)
 
-pytrends = TrendReq(hl='en-US', geo='', tz=360, retries=0, timeout=(30, 45))
+pytrends = TrendReq(hl='en-US', geo='', tz=360, retries=5, timeout=(30, 45))
 
 df = pytrends.get_historical_interest(keyword_query, year_start=year_start, month_start=month_start,
                                       day_start=day_start,
