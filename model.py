@@ -33,15 +33,11 @@ warnings.filterwarnings("ignore")
 
 def main():
     #os.system("python3 update_features_store.py")
-    os.system("python3 model_evaluate.py")
+    #os.system("python3 model_evaluate.py")
     nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
     date_sent = nyc_datetime - pd.Timedelta("1 days")
-    for j in range(0,1000):
-        maker = 0
-        if j == -10 :
-            maker = 1
-            market(maker).stock_matrix()
-            maker = 0
+    
+    for j in range(0,1000):   
         
         # Send update email once a day
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
@@ -51,42 +47,31 @@ def main():
             print('\nSending email update on model quality\n')
             features_report()
             top_50()
-            market(maker).emails()
-            date_sent = nyc_datetime
-            print('Completed\n')
+            market().emails()
+            date_sent = datetime.now(pytz.timezone('US/Eastern'))
         
-        for k in range (0,20):
-            market(maker).execute()
+        # Create stock links matrix on the Saturday
+        nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+        start = nyc_datetime.replace(hour=0, minute=0, second=1,microsecond=0)
+        end = nyc_datetime.replace(hour=0, minute=30, second=0,microsecond=0)
+        if (nyc_datetime > start) & (nyc_datetime < end) & (nyc_datetime.weekday() == 6):
+            market().stock_matrix()
+        
+        market().execute()
                 
         os.system("python model_evaluate.py")
         
 class market :
-    def __init__(self, maker) :
-        #self.verify_features_store()
+    def __init__(self) :
         self.possibilities =  ['INTC', 'AMZN', 'FB', 'AAPL', 'DIS', 'TSLA', 'GOOG', 'GOOGL', 
                                'MSFT', 'NFLX', 'NVDA', 'TWTR', 'AMD', 'WMT', 'JPM', 'SPY', 'QQQ', 'BAC', 'PG']
-        self.path = os.getcwd()
-        self.n_iter = 5
-        self.predict = random.sample(self.possibilities, 1)[0]
-        self.use_n = random.randint(1, 10)
         self.price_data = pd.read_csv('./data/features_store.csv',',')
         self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.80))
         self.all = glob.glob(os.getcwd() + '/models/*.{}'.format('csv'))
-        self.flag = 0
-        self.maker = maker
-        self.flag = 0
-        
-        #Halt during pre-trading times
-        nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-        start = nyc_datetime.replace(hour=7, minute=20, second=0,microsecond=0)
-        end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
-        if (nyc_datetime > start) & (nyc_datetime < end) :
-            os.system('rm ./data/stock_links.csv')
-            time.sleep(3600)
+        self.mode = random.randint(1,10)
        
     def stock_matrix(self) :
         print('\nMaking stock links matrix\n')
-        self.maker = 1
         for stock_a in self.possibilities : 
             for stock_b in self.possibilities :
                 print('For', stock_a, 'Using', stock_b)
@@ -98,24 +83,6 @@ class market :
         os.system("python model_evaluate.py")
         if len(glob.glob('./data/stock_links.csv')) :
             os.system("rm ./data/stock_links.csv")
-        
-    def error_handling(self, error_message) :
-        today = datetime.today()
-        error_location = "model.py"
-        error_report = pd.DataFrame({'Date' : today.strftime('%Y - %m - %d'), 'Code_name' : [error_location], 'Message' : [error_message]})
-        error_report = error_report.set_index('Date')
-        error(error_report)
-        print(error_message)
-        print('Code sleeping until user kill')
-        time.sleep(10000000)
-              
-    def verify_features_store(self):
-        price_data = pd.read_csv('./data/features_store.csv',',')
-        price_data['Date'] = pd.to_datetime(price_data['Date'])
-        today = datetime.today()
-        if price_data['Date'].iloc[0] < today - timedelta(days=5) :
-            error_message = "The features store has not been updated for ten or more days, this is evaluated as a fatal error as it can lead to incorrect models, please update features store"
-            self.error_handling(error_message)
             
     def use_stocks(self) :
         possibilities = self.possibilities
@@ -131,13 +98,12 @@ class market :
                     if (record['trade_accuracy_test'][record['model_name'] == model].tolist() != []) :
                         ROC_test = record['ROC_test'][record['model_name'] == model].iloc[0]
                         accuracy_test = record['accuracy_test'][record['model_name'] == model].iloc[0]
-                        #print(model, 'Has ROC AUC of', ROC)
+
                         self.links[stock_a].iloc[line] = (ROC_test + accuracy_test)/2
                     model = stock_a + '-' + stock_b + '-' + str(0)
                     if (record['trade_accuracy_test'][record['model_name'] == model].tolist() != []) :
                         ROC_test = record['ROC_test'][record['model_name'] == model].iloc[0]
                         accuracy_test = record['accuracy_test'][record['model_name'] == model].iloc[0]
-                        #print(model, 'Has ROC AUC of', ROC)
                         self.links[stock_a].iloc[line] = (ROC_test + accuracy_test)/2
                     line += 1
         
@@ -152,16 +118,11 @@ class market :
         print('\nPredicting : ', self.predict)
         print('Using the following stocks : ', self.use)
         
-    def all_features (self) :
+    def features (self) :
         price_data = self.price_data.drop(['Open','Close','Date','delta_class','delta','stock'],1)
-        
-        if self.maker == 0 :
-            self.n_features = random.randint(30, 300)
-        elif self.maker == 1 :
-            self.n_features = 500
-        
+                
         return price_data.columns
-    
+        
     def prep(self) :
         price_data = self.price_data
         use = self.use 
@@ -174,33 +135,65 @@ class market :
         self.price_data_train = price_data[price_data['stock'].isin(use)].loc[(price_data['Date'] < first_date)]
         self.price_data_test = price_data[price_data['stock'] == self.predict].loc[(price_data['Date'] >= first_date)]
         self.y_train = self.price_data_train['delta_class'].tolist()
-        self.y_test = self.price_data_test['delta_class'].tolist() 
-        self.weights = []
-                        
-        self.features_name = self.all_features ()
-        self.X_train = self.price_data_train[self.features_name]
-        self.X_test = self.price_data_test[self.features_name]
+        self.y_test = self.price_data_test['delta_class'].tolist()                 
+        self.X_train = self.price_data_train[self.features()]
+        self.X_test = self.price_data_test[self.features()]
             
         return 
         
     def make_model (self) :
-        self.shaps = [0.02]
-        self.shaps  = random.choice(self.shaps)
+        ml_parameters = pd.read_csv('./data/parameters.csv')
+        
+        if self.mode == 1 :
+            self.shaps = np.round(np.logspace(-3.5,-1,num=20),4)
+            self.shaps = random.choice(self.shaps)
+            extention = self.shaps
+        else : 
+            self.shaps = ml_parameters['shaps'].iloc[0]
+            extention = 0
+        
+        if self.mode == 2 :
+            leaves = np.linspace(10,500,20)
+            leaves = int(random.choice(leaves))
+        else : 
+            leaves = int(ml_parameters['num_leaves'].iloc[0])
+            
+        if self.mode == 3 :
+            depth = np.linspace(2,20,10)
+            depth = int(random.choice(depth))
+        else : 
+            depth = int(ml_parameters['max_depth'].iloc[0])
+            
+        if self.mode == 4 :
+            rate = np.round(np.logspace(-3.5,0,num=20),4)
+            rate = random.choice(rate)
+        else : 
+            rate = ml_parameters['learning_rate'].iloc[0]
+            
+        if self.mode == 5 :
+            bins = np.linspace(10,500,20)
+            bins = int(random.choice(bins))
+        else : 
+            bins = int(ml_parameters['bins'].iloc[0])
+            
+        if self.mode == 6 :
+            is_unbalance = [True, False]
+            is_unbalance = random.choice(is_unbalance)
+        else : 
+            is_unbalance = bool(int(ml_parameters['is_unbalance'].iloc[0]))
+            
         self.train_names = '-'.join(self.use)
-        self.model = self.predict + '-' + self.train_names + '-' + str(0)
-        leaves = [400]
-        depth = [4, 6]
-        rate = [0.05]
-        bins = [50]
+        self.model = self.predict + '-' + self.train_names + '-' + str(extention)
         
         self.prep()
         y_train = self.y_train
         X_train = self.X_train
         
         train_data = lgb.Dataset(X_train,label=y_train)
-        param = {'num_leaves':random.choice(leaves), 'objective':'binary','max_depth':random.choice(depth),
-                 'learning_rate':random.choice(rate),'max_bin':random.choice(bins),
-                 'num_threads':11, 'verbose': -1, 'is_unbalance': True}
+        param = {'num_leaves':leaves, 'objective':'binary','max_depth':depth,
+                 'learning_rate':rate,'max_bin':bins,
+                 'num_threads':11, 'verbose': -1, 'is_unbalance': is_unbalance}
+        
         num_round = 100
         lgbm = lgb.train(param,train_data,num_round, verbose_eval=False)
         
@@ -210,6 +203,7 @@ class market :
         values = np.mean(values, axis=0)
         df = pd.DataFrame({'features' : self.X_test.columns, 'value' : values}).sort_values(by=['value'], ascending=False)
         self.feature_imp = df[df['value']>self.shaps]
+        print(lgbm.params)
         if np.shape(self.feature_imp)[0]>0:
             self.parameters = lgbm.params
             self.record()
@@ -265,15 +259,75 @@ class market :
         report.to_csv('./data/model_report.csv', index = False)
         send_report()
 
-                                 
-    def execute(self) :
-        start = datetime.now()
-        self.use_stocks()
-        self.prep()
-        self.make_model()
+    def selector(self):
+        
+        if len(glob.glob('./data/record_model.csv')):
+            record = pd.read_csv('./data/record_model.csv')
+            record = record.drop_duplicates(subset=['model_name'], keep='first')
+            record['date'] = pd.to_datetime(record['date'])
+            today = datetime.now()
+            recent = today - timedelta(days=7)
+            record = record[record['date'] > recent].dropna()
             
-        stop = datetime.now()    
-        print('Time for model creation : ', (stop - start))
+            models = record['model_name'].tolist()
+            accuracy_test = np.array(record['trade_accuracy_test'].to_list())#[:-5]
+            accuracy_live = np.array(record['trade_accuracy_live'].to_list())
+            ROC_live = np.array(record['ROC_live'].to_list())#[:-5]
+            ROC_test = np.array(record['ROC_test'].to_list())
+            metric = (accuracy_test + accuracy_live + ROC_live + ROC_test)/4
+            
+            parameters = record.parameters.to_list()
+            shaps = [float(model.split('-')[-1]) for model in models]
+            num_leaves = [int(eval(x)[0][1]) for x in parameters]
+            max_depth = [int(eval(x)[2][1]) for x in parameters]
+            learning_rate = [eval(x)[3][1] for x in parameters]
+            bins = [int(eval(x)[4][1]) for x in parameters]
+            is_unbalance = [int(eval(x)[7][1]) for x in parameters]
+            
+            df = pd.DataFrame({'shaps' : shaps, 'num_leaves' : num_leaves, 'max_depth': max_depth, 
+                               'learning_rate' :learning_rate, 'bins': bins,
+                               'is_unbalance': is_unbalance, 'metric': metric})
+            ml_parameters = pd.DataFrame()
+            
+            ml_parameters['num_leaves'] = [df.groupby(['num_leaves']).mean().reset_index().sort_values(by=['metric'], ascending=False)['num_leaves'].iloc[0]]
+            ml_parameters['max_depth'] = [df.groupby(['max_depth']).mean().reset_index().sort_values(by=['metric'], ascending=False)['max_depth'].iloc[0]]
+            ml_parameters['learning_rate'] = [df.groupby(['learning_rate']).mean().reset_index().sort_values(by=['metric'], ascending=False)['learning_rate'].iloc[0]]
+            ml_parameters['bins'] = [df.groupby(['bins']).mean().reset_index().sort_values(by=['metric'], ascending=False)['bins'].iloc[0]]
+            ml_parameters['is_unbalance'] = [df.groupby(['is_unbalance']).mean().reset_index().sort_values(by=['metric'], ascending=False)['is_unbalance'].iloc[0]]
+    
+            df = df[df['shaps']>0]
+            if len(df)>0:
+                ml_parameters['shaps'] = [df.groupby(['shaps']).mean().reset_index().sort_values(by=['metric'], ascending=False)['shaps'].iloc[0]]
+            else:
+                ml_parameters['shaps'] = 0.02
+        else:
+            ml_parameters['num_leaves'] = 400
+            ml_parameters['max_depth'] = 6
+            ml_parameters['learning_rate'] = 0.01
+            ml_parameters['bins'] = 50
+            ml_parameters['is_unbalance'] = 1
+            ml_parameters['shaps'] = 0.02
+                
+        ml_parameters.to_csv('./data/parameters.csv', index=False)
+        
+    def execute(self) :
+        
+        for k in range (0,20):
+            
+            #Halt during pre-trading times
+            nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+            start = nyc_datetime.replace(hour=7, minute=30, second=0,microsecond=0)
+            end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
+            if (nyc_datetime > start) & (nyc_datetime < end) :
+                os.system('rm ./data/stock_links.csv')
+                time.sleep((start-end).seconds)
+                
+            self.predict = random.sample(self.possibilities, 1)[0]
+            self.use_n = random.randint(1, 10)
+            self.selector()
+            self.use_stocks()
+            self.prep()
+            self.make_model()
         
 
 if __name__ == "__main__":
