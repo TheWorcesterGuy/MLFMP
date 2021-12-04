@@ -109,10 +109,20 @@ def merge_files(stocks):
         df_price = pd.read_csv('./data/%s_features_trading.csv' % stock)
         df_twitter = pd.read_csv('./data/%s_features_twitter.csv' % stock)
         df_minute_price = pd.read_csv('./data/%s_minute_price_features.csv' % stock)
-        if os.path.exists('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (stock, stock)): # we don't have google trends for all stocks yet
-            df_trend = pd.read_csv('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (stock, stock))
+
+        # get matching google stock keyword for a given stock name
+        if stock == 'FB':
+            google_keyword = 'facebook stock'
+        else:
+            google_keyword = stock
+
+        # we don't have google trends for all stocks yet
+        if os.path.exists('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (google_keyword,
+                                                                                           google_keyword)):
+            df_trend = pd.read_csv('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (google_keyword,
+                                                                                                    google_keyword))
             df_merged = reduce(lambda left, right: pd.merge(left, right, on=['Date'],
-                                                            how='inner'), [df_price, df_twitter, df_minute_price, df_trend])
+                                                     how='inner'), [df_price, df_twitter, df_minute_price, df_trend])
             df_list.append(df_merged)
             #os.system(" rm './data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv'" % (stock, stock))
         else:
