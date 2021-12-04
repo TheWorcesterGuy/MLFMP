@@ -25,9 +25,8 @@ day_end = int(args[5])
 
 keywords = args[6:]
 
-# for couple Bullish / Bearish
-if len(keywords) == 2:
-
+# for couple Bullish / Bearish (if so, there will be brackets as it's a list in input)
+if '[' in keywords[0]:
     temp_keyword = [val.replace("'", "").replace("[", "").replace("]", "").replace(",", "") for val in keywords]
     keyword_query = temp_keyword
 

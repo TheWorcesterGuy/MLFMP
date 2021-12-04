@@ -29,7 +29,7 @@ def main():
                     'INTC', 'DIS', 'JPM', 'WMT', 'NFLX', 'GOOG', 'GOOGL', 'NVDA', 'TWTR',
                     'debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk',
                      ['bullish', 'bearish'], 'investing.com']
-                     
+
     if os.path.isfile('./data/temp_data.csv'):
         os.system('rm ./data/temp_data.csv')
 
@@ -185,7 +185,6 @@ def main():
 
                     os.system("python query_google.py %s %s %s %s %s %s %s" % (start_date.year, start_date.month, start_date.day,
                                                                                    next_date.year, next_date.month, next_date.day, str(google_trend)))
-
                 df = pd.read_csv('data/temp_data.csv')
                 df['isPartial'] = df['isPartial'].astype(str)
 
