@@ -18,7 +18,6 @@ google_trends_dir = ['facebook stock', 'SPY', 'AMD', 'AAPL', 'AMZN', 'QQQ', 'TSL
 df_last_google_trends = []
 for google_trend in google_trends_dir:
     last_file = None
-    print(google_trend)
     files = glob.glob('./data/GOOGLE_TRENDS/%s/*.csv' % google_trend)
     for file in files:
         if str(datetime.today().month) in file and str(datetime.today().year) in file:
@@ -39,7 +38,6 @@ df.to_csv('./log/features_store/google_trend_data_check.csv', index=False)
 
 
 # CHECK ON TWITTER DATA
-
 stocks = ['INTC', 'TSLA', 'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
           'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG']
 
@@ -61,6 +59,36 @@ for stock in stocks:
 
 df = pd.concat(df_last_twitters, axis=0)
 df.to_csv('./log/features_store/twitter_data_check.csv', index=False)
+
+
+
+
+# REPORT ON THE NANS VARIABLES
+df = pd.read_csv('./data/features_store.csv')
+
+df = df[df['Date'] == df['Date'].max()]
+max_date = df['Date'].max()
+
+stocks = df['stock'].unique().tolist()
+
+my_file = Path("./log/features_store/nans_per_stock.txt")
+if my_file.is_file():
+    os.system('rm ./log/features_store/nans_per_stock.txt')
+
+with open('./log/features_store/nans_per_stock.txt', 'a') as f:
+    f.write("Last date : %s\n\n\n" % max_date)
+
+for stock in stocks:
+    df_stock = df[df['stock'] == stock]
+    nan_vals = df_stock.columns[df_stock.isna().any()].tolist()
+    with open('./log/features_store/nans_per_stock.txt', 'a') as f:
+        f.write("%s\n" % stock)
+        for item in nan_vals:
+            f.write("%s\n" % item)
+        f.write("\n\n\n")
+
+
+
 
 
 
@@ -132,28 +160,5 @@ if df['Date'].max() != current_date:
 # delete feature store if healthy check failed
 #if not healthy_feature_store :
     #os.system('rm ./data/features_store.csv')
-
-
-# REPORT ON THE NANS VARIABLES
-df = pd.read_csv('./data/features_store.csv')
-
-df = df[df['Date'] == df['Date'].max()]
-max_date = df['Date'].max()
-
-stocks = df['stock'].unique().tolist()
-
-my_file = Path("./log/features_store/nans_per_stock.txt")
-if my_file.is_file():
-    os.system('rm ./log/features_store/nans_per_stock.txt')
-
-with open('./log/features_store/nans_per_stock.txt', 'a') as f:
-    f.write("Last date : %s\n\n\n" % max_date)
-
-for stock in stocks:
-    df_stock = df[df['stock'] == stock]
-    nan_vals = df_stock.columns[df_stock.isna().any()].tolist()
-    with open('./log/features_store/nans_per_stock.txt', 'a') as f:
-        f.write("%s\n" % stock)
-        for item in nan_vals:
-            f.write("%s\n" % item)
-        f.write("\n\n\n")
+    
+    

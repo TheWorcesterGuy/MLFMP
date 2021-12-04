@@ -98,7 +98,7 @@ def main():
                 df['date'] = pd.to_datetime(df['date'])
                 df = df[df['date'] < datetime.now(pytz.timezone('US/Eastern')) - pd.Timedelta(hours=1)]
 
-                print('Last row downloaded : ', df.tail(1))
+                print('Last row downloaded : ', df) #.tail(1))
 
                 df.to_csv(filename, index=False)
                 start_date = df['date'].max()
@@ -201,7 +201,7 @@ def main():
                 df['date'] = pd.to_datetime(df['date'])
                 df = df[df['date'] < datetime.now(pytz.timezone('US/Eastern')) - pd.Timedelta(hours=1)]
 
-                print('Last row downloaded : ', df.tail(1))
+                print('Last row downloaded : ', df) #.tail(1))
 
                 df.to_csv(filename, index=False)
                 start_date = df['date'].max()
