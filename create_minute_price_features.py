@@ -81,7 +81,7 @@ def main():
     price_max_time = df_extra.sort_values('Datetime', ascending=True).drop_duplicates(['Date'], keep='last')[['Date', 'open']]
     price_max_time = price_max_time.rename(columns={'open':'price_next_open'})
     df_delta_close_next_open = price_min_time.merge(price_max_time, on='Date', how='outer')
-    df_delta_close_next_open['delta_post_closing'] = df_delta_close_next_open['price_close'] / df_delta_close_next_open['price_next_open']
+    df_delta_close_next_open['delta_post_closing'] = (df_delta_close_next_open['price_next_open'] - df_delta_close_next_open['price_close']) / df_delta_close_next_open['price_close'] * 100
     df_delta_close_next_open = df_delta_close_next_open[['Date', 'delta_post_closing']]
     df_delta_close_next_open['Date'] = pd.to_datetime(df_delta_close_next_open['Date'])
 
