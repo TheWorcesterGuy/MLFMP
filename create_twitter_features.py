@@ -47,11 +47,12 @@ def main():
     df = create_derived_features(df)
 
     # make deltas (not to be used in training!)
-    df['delta'] = (df['Close'] - df['Open']) / df['Open'] * 100   # open at 9:30 am NY and close at 17:00 pm NY
+    df['delta'] = (df['Close'] - df['Open']) / df['Open'] * 100   # open at 9:30 am NY and close at 16:00 pm NY
     df['delta_class'] = np.nan
 
     df.loc[df['delta'] > 0, 'delta_class'] = 1
     df.loc[df['delta'] <= 0, 'delta_class'] = -1
+    df = df.drop(['Open', 'Close'], axis=1)
 
     df = df.sort_values('Date', ascending=False)
 
