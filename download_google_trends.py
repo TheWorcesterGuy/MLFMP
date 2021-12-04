@@ -19,11 +19,11 @@ from pathlib import Path
 
 def main():
 
-    waiting_time = 27
+    waiting_time = 45
     n_days = 14
 
     # Check if Google Trend update is allowed
-    check_update_validity()
+    #check_update_validity()
 
     google_trends = ['facebook stock', 'SPY', 'AMD', 'AAPL', 'AMZN', 'QQQ', 'TSLA', 'MSFT',
                     'INTC', 'DIS', 'JPM', 'WMT', 'NFLX', 'GOOG', 'GOOGL', 'NVDA', 'TWTR',
