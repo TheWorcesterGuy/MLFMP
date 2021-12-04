@@ -67,7 +67,6 @@ class features:
             reinf.set_index('Date', inplace=True)
             for j in combinations:
                 price_data[rt + ' - ' + str(j)] = ((reinf['Open'] - reinf['Close'].shift(j)) / reinf['Close'].shift(j)) * 100
-            price_data[rt + ' + 1d ' + str(1)] = ((reinf['Open'] - reinf['Close']) / reinf['Open']) * 100
             price_data[rt + ' High ' + str(1)] = ((reinf['High'] - reinf['Low']) / reinf['Open']) * 100
             
             if len(np.where(price_data.columns == 'Adj Close')[0]) > 0 :
