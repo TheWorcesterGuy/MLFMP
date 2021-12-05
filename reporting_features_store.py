@@ -8,6 +8,49 @@ import glob
 import datetime as dt
 
 
+# CHECK ON MINUTE DATA
+stocks = ['INTC', 'TSLA', 'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
+          'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG']
+
+df_minute_list = []
+for stock in stocks:
+    df_temp = pd.read_csv('./data/TRADE_DATA/minute_data/%s.csv' % stock)
+
+    df_temp['stock'] = stock
+    df_temp['Datetime'] = pd.to_datetime(df_temp['Datetime'])
+    df_temp['date'] = df_temp['Datetime'].dt.date
+    df_temp['time (UTC)'] = df_temp['Datetime'].dt.time
+    df_temp = df_temp[['stock', 'date', 'time', 'open', 'close']].tail(1)
+
+    df_minute_list.append(df_temp)
+
+df_minute_report = pd.concat(df_minute_list, axis=0)
+df_minute_report = df_minute_report.reset_index(drop=True)
+
+df_minute_report.to_csv('./log/features_store/minute_data.csv', index=False)
+
+
+
+# CHECK ON PRICE DATA
+stocks = ['INTC', 'TSLA', 'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
+          'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG']
+
+df_price_list = []
+for stock in stocks:
+    df_temp = pd.read_csv('./data/TRADE_DATA/price_data/%s.csv' % stock)
+
+    df_temp['stock'] = stock
+    df_temp = df_temp[['stock', 'Date', 'Open', 'Close']].tail(1)
+
+    df_price_list.append(df_temp)
+
+df_price_report = pd.concat(df_price_list, axis=0)
+df_price_report = df_price_report.reset_index(drop=True)
+
+df_price_report.to_csv('./log/features_store/price_data.csv', index=False)
+
+
+
 # CHECK ON THE GOOGLE TRENDS DATA
 google_trends_dir = ['facebook stock', 'SPY', 'AMD', 'AAPL', 'AMZN', 'QQQ', 'TSLA', 'MSFT',
                  'INTC', 'DIS', 'JPM', 'WMT', 'NFLX', 'GOOG', 'GOOGL', 'NVDA', 'TWTR',
@@ -28,12 +71,12 @@ for google_trend in google_trends_dir:
     df_last_google['stock'] = df_last_google.columns[1]
     df_last_google['value'] = df_last_google[df_last_google.columns[1]]
 
-    df_last_google = df_last_google[['date', 'stock', 'value', 'isPartial']]
+    df_last_google = df_last_google[['stock', 'date', 'value', 'isPartial']]
     df_last_google = df_last_google.rename(columns={'date': 'last_datetime_NY'})
     df_last_google_trends.append(df_last_google)
 
 df = pd.concat(df_last_google_trends, axis=0)
-df.to_csv('./log/features_store/google_trend_data_check.csv', index=False)
+df.to_csv('./log/features_store/google_trend_data.csv', index=False)
 
 
 
@@ -52,15 +95,13 @@ for stock in stocks:
 
     df_last_twitter = df_last_twitter.tail(1)
     df_last_twitter['stock'] = stock
-    df_last_twitter = df_last_twitter[['Datetime', 'stock', 'compound']]
+    df_last_twitter = df_last_twitter[['stock', 'Datetime', 'compound']]
     df_last_twitter = df_last_twitter.rename(columns={'Datetime': 'last_datetime_utc'})
 
     df_last_twitters.append(df_last_twitter)
 
 df = pd.concat(df_last_twitters, axis=0)
-df.to_csv('./log/features_store/twitter_data_check.csv', index=False)
-
-
+df.to_csv('./log/features_store/twitter_data.csv', index=False)
 
 
 # REPORT ON THE NANS VARIABLES
@@ -90,8 +131,6 @@ for stock in stocks:
 
 
 
-
-
 # REPORT ON THE FEATURE STORE NUMBER OF NANS
 current_date = datetime.today().strftime('%Y-%m-%d')
 
@@ -109,7 +148,7 @@ df_metric['nb_nans'] = df_last_day.isnull().sum(axis=1)
 df_metric['percentage_nans'] = np.round(df_metric['nb_nans'] / df_last_day.shape[1] * 100, 2)
 
 # compute global metric to compare against
-df_sample = df.iloc[-500:]
+df_sample = df.iloc[:5000] # nb days x nb stock
 df_metric_sample = df_sample[['Date', 'stock']]
 df_metric_sample['mean_nb_nans'] = df_sample.isnull().sum(axis=1)
 df_metric_sample['mean_percentage_nans'] = np.round(df_metric_sample['mean_nb_nans'] / df_sample.shape[1] * 100, 2)
@@ -125,6 +164,7 @@ df = df_metric.merge(df_metric_sample, on='stock', how='outer')
 df.to_csv('./log/features_store/features_store_log.csv', index=False)
 
 
+# APPLY HEALTH CHECK
 my_file = Path("./data/top_50.csv")
 if my_file.is_file():
     df_features = pd.read_csv('./data/top_50.csv')
@@ -151,14 +191,3 @@ if my_file.is_file():
 
     if df['nb_nans_top_50'].sum() > 0:
         healthy_feature_store = False
-
-
-# if last date in feature store is not today's
-if df['Date'].max() != current_date:
-    healthy_feature_store = False
-
-# delete feature store if healthy check failed
-#if not healthy_feature_store :
-    #os.system('rm ./data/features_store.csv')
-    
-    
