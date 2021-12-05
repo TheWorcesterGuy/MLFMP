@@ -29,7 +29,7 @@ for google_trend in google_trends_dir:
     df_last_google['value'] = df_last_google[df_last_google.columns[1]]
 
     df_last_google = df_last_google[['date', 'stock', 'value', 'isPartial']]
-    df_last_google = df_last_google.rename(columns={'date': 'last_datetime'})
+    df_last_google = df_last_google.rename(columns={'date': 'last_datetime_NY'})
     df_last_google_trends.append(df_last_google)
 
 df = pd.concat(df_last_google_trends, axis=0)
