@@ -16,8 +16,8 @@ warnings.simplefilter(action='ignore')
 
 def main():
 
-    update_date = datetime.today().strftime('%Y-%m-%d')
-    print('UPDATE DATE : %s\n\n' % update_date)
+    update_start_date = pd.Timestamp.today().strftime('%Y-%m-%d %H:%M')
+    print('UPDATE START DATE (UTC) : %s\n\n' % update_start_date)
 
     stocks = ['INTC', 'TSLA',  'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
               'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG']
@@ -72,7 +72,13 @@ def main():
     print('\n Time to update twitter features: ', (stop - stop_trade))
     print('\n Time to update features: ', (stop - start))
     print('\nLast row added:', df.head(1))
-    print('\nEND UPDATE DATE\n\n\n\n')
+    
+    
+    update_end_date = pd.Timestamp.today().strftime('%Y-%m-%d %H:%M')
+    print('\n\nUPDATE END DATE (UTC) : %s\n\n' % update_end_date)
+    
+    os.system('python reporting_features_store.py')
+
     
 
 def apply_parallel_command(max_processes, command, list_argument, env_path=None):
