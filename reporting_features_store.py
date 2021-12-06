@@ -20,7 +20,7 @@ for stock in stocks:
     df_temp['Datetime'] = pd.to_datetime(df_temp['Datetime'])
     df_temp['date'] = df_temp['Datetime'].dt.date
     df_temp['time (UTC)'] = df_temp['Datetime'].dt.time
-    df_temp = df_temp[['stock', 'date', 'time', 'open', 'close']].tail(1)
+    df_temp = df_temp[['stock', 'date', 'time (UTC)', 'open', 'close']].tail(1)
 
     df_minute_list.append(df_temp)
 
