@@ -6,6 +6,77 @@ import os
 pd.options.mode.chained_assignment = None
 import glob
 import datetime as dt
+from functools import reduce
+
+
+# CHECK FEATURE FILES
+stocks = ['INTC', 'TSLA', 'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
+          'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG']
+
+df_list_stock = []
+for stock in stocks:
+
+    # check twitter features
+    df_twitter_stock = pd.read_csv('./data/%s_features_twitter.csv' % stock)
+    df_twitter_stock = df_twitter_stock[df_twitter_stock['Date'] == df_twitter_stock['Date'].max()]
+    df_twitter_stock['source'] = 'twitter'
+    df_twitter_stock['stock'] = stock
+    df_twitter_stock = df_twitter_stock[['Date', 'source', 'stock']]
+
+    # check google stock features
+    try:
+        if stock == 'FB':
+            df_google_stock = pd.read_csv('./data/GOOGLE_TRENDS/facebook stock/encoded_data/facebook stock_features_google.csv')
+        else:
+            df_google_stock = pd.read_csv('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (stock, stock))
+        df_google_stock = df_google_stock[df_google_stock['Date'] == df_google_stock['Date'].max()]
+        df_google_stock['source'] = 'google_stock'
+        df_google_stock['stock'] = stock
+        df_google_stock = df_google_stock[['Date', 'source', 'stock']]
+    except:
+        df_google_stock = pd.DataFrame([[np.nan, 'google stock', stock]], columns=['Date', 'source', 'stock'])
+ 
+
+    # check google mood features
+    moods = ['debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk',
+                         'investing.com', 'bullish_bearish']
+    min_date = '3000-12-31'
+    for mood in moods:
+        df_google_mood = pd.read_csv('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (mood, mood))
+        df_google_mood = df_google_mood[df_google_mood['Date'] == df_google_mood['Date'].max()]
+        if df_google_mood['Date'].iloc[0] < min_date:
+            min_date = df_google_mood['Date'].iloc[0]
+            df_google_mood = df_google_mood
+
+    df_google_mood['source'] = 'google_mood'
+    df_google_mood['stock'] = stock
+    df_google_mood = df_google_mood[['Date', 'source', 'stock']]
+
+
+    # check price features
+    df_price_stock = pd.read_csv('./data/%s_features_trading.csv' % stock)
+    df_price_stock = df_price_stock[df_price_stock['Date'] == df_price_stock['Date'].max()]
+    df_price_stock['source'] = 'price'
+    df_price_stock['stock'] = stock
+    df_price_stock = df_google_stock[['Date', 'source', 'stock']]
+
+    # check minute price data
+    df_minute_price_stock = pd.read_csv('./data/%s_minute_price_features.csv' % stock)
+    df_minute_price_stock = df_minute_price_stock[df_minute_price_stock['Date'] == df_minute_price_stock['Date'].max()]
+    df_minute_price_stock['source'] = 'minute price'
+    df_minute_price_stock['stock'] = stock
+    df_minute_price_stock = df_minute_price_stock[['Date', 'source', 'stock']]
+
+    # merge together
+
+    df_stock = pd.concat([df_twitter_stock, df_google_stock, df_google_mood, 
+                                                            df_price_stock, df_minute_price_stock], axis=0)[['stock', 'source', 'Date']]
+
+    df_list_stock.append(df_stock)
+
+df_stock_all = pd.concat(df_list_stock, axis=0)
+df_stock_all.to_csv('./log/features_store/features_report.csv', index=False)
+
 
 
 # CHECK ON MINUTE DATA
@@ -164,7 +235,7 @@ df = df_metric.merge(df_metric_sample, on='stock', how='outer')
 df.to_csv('./log/features_store/features_store_log.csv', index=False)
 
 
-# APPLY HEALTH CHECK
+"""# APPLY HEALTH CHECK
 my_file = Path("./data/top_50.csv")
 if my_file.is_file():
     df_features = pd.read_csv('./data/top_50.csv')
@@ -190,4 +261,6 @@ if my_file.is_file():
                                                        'nb_nans', 'mean_nb_nans', 'percentage_nans', 'mean_percentage_nans']]
 
     if df['nb_nans_top_50'].sum() > 0:
-        healthy_feature_store = False
+        healthy_feature_store = False"""
+
+
