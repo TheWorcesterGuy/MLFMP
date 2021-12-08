@@ -26,8 +26,8 @@ def main():
         if '%s_encoded.csv' % file[:-4] not in encoded_files:
             files_to_encode.append(file)
 
-
-    if len(files_to_encode) == 0:  # update the current file (an encoded file already exist for each raw file)
+    # update the current file (an encoded file already exist for each raw file)
+    if len(encoded_files) > 0:
         current_year = 0
         current_week = 0
         for file in raw_files:
@@ -38,12 +38,11 @@ def main():
                 if int(file.split('_')[3][:-4]) > current_week:
                     current_week = int(file.split('_')[3][:-4])
 
-        files_to_encode = ['tweets_%s_%s_%s.csv' % (keyword, current_year, current_week)]
+        files_to_encode.append('tweets_%s_%s_%s.csv' % (keyword, current_year, current_week))
 
     for file in files_to_encode:
 
         file_name = 'data/TWITTER_DATA/%s/encoded_data/' % keyword + file[:-4] + '_encoded.csv'
-
         enc_df = pd.read_csv('data/TWITTER_DATA/%s/' % keyword + file, lineterminator='\n')
 
         if enc_df.empty is False:
