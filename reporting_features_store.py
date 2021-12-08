@@ -58,7 +58,7 @@ for stock in stocks:
     df_price_stock = df_price_stock[df_price_stock['Date'] == df_price_stock['Date'].max()]
     df_price_stock['source'] = 'price'
     df_price_stock['stock'] = stock
-    df_price_stock = df_google_stock[['Date', 'source', 'stock']]
+    df_price_stock = df_price_stock[['Date', 'source', 'stock']]
 
     # check minute price data
     df_minute_price_stock = pd.read_csv('./data/%s_minute_price_features.csv' % stock)
@@ -68,10 +68,8 @@ for stock in stocks:
     df_minute_price_stock = df_minute_price_stock[['Date', 'source', 'stock']]
 
     # merge together
-
     df_stock = pd.concat([df_twitter_stock, df_google_stock, df_google_mood, 
                                                             df_price_stock, df_minute_price_stock], axis=0)[['stock', 'source', 'Date']]
-
     df_list_stock.append(df_stock)
 
 df_stock_all = pd.concat(df_list_stock, axis=0)
