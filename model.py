@@ -33,7 +33,7 @@ warnings.filterwarnings("ignore")
 
 def main():
     #os.system("python3 update_features_store.py")
-    #os.system("python3 model_evaluate.py")
+    os.system("python3 model_evaluate.py")
     nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
     date_sent = nyc_datetime - pd.Timedelta("1 days")
     
@@ -41,19 +41,20 @@ def main():
         
         # Send update email once a day
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-        start = nyc_datetime.replace(hour=16, minute=30, second=0,microsecond=0)
-        end = nyc_datetime.replace(hour=17, minute=30, second=0,microsecond=0)
+        start = nyc_datetime.replace(hour=16, minute=0, second=0,microsecond=0)
+        end = nyc_datetime.replace(hour=16, minute=30, second=0,microsecond=0)
         if (nyc_datetime > start) & (nyc_datetime < end) & (nyc_datetime.date() > date_sent.date()) :
             print('\nSending email update on model quality\n')
+            os.system('rm ./data/stock_links.csv')
             features_report()
             top_50()
             market().emails()
             date_sent = datetime.now(pytz.timezone('US/Eastern'))
         
-        # Create stock links matrix on the Saturday
+        # Create stock links matrix on the Weekend
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-        start = nyc_datetime.replace(hour=0, minute=0, second=1,microsecond=0)
-        end = nyc_datetime.replace(hour=0, minute=30, second=0,microsecond=0)
+        start = nyc_datetime.replace(hour=1, minute=0, second=1,microsecond=0)
+        end = nyc_datetime.replace(hour=1, minute=30, second=0,microsecond=0)
         if (nyc_datetime > start) & (nyc_datetime < end) & (nyc_datetime.weekday() == 6):
             market().stock_matrix()
         
@@ -66,11 +67,13 @@ class market :
         self.possibilities =  ['INTC', 'AMZN', 'FB', 'AAPL', 'DIS', 'TSLA', 'GOOG', 'GOOGL', 
                                'MSFT', 'NFLX', 'NVDA', 'TWTR', 'AMD', 'WMT', 'JPM', 'SPY', 'QQQ', 'BAC', 'PG']
         self.price_data = pd.read_csv('./data/features_store.csv',',')
-        self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.80))
+        self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.95))
         self.all = glob.glob(os.getcwd() + '/models/*.{}'.format('csv'))
         self.mode = random.randint(1,10)
+        print('\nModel creation mode : %d\n' %self.mode)
        
     def stock_matrix(self) :
+        self.mode = 10
         print('\nMaking stock links matrix\n')
         for stock_a in self.possibilities : 
             for stock_b in self.possibilities :
@@ -90,21 +93,29 @@ class market :
         if not len(glob.glob('./data/stock_links.csv')) :
             record = pd.read_csv('./data/record_model.csv')
             record = record.drop_duplicates(subset=['model_name'], keep='last')
+            record['model_name'] = record['model_name'].str.replace('-0', '').str.replace('.', '').str.replace('\d+', '')
             self.links = pd.DataFrame(columns = possibilities, index = possibilities)
             for stock_a in possibilities :
                 line = 0
                 for stock_b in possibilities :  
-                    model = stock_a + '-' + stock_a + '-' + stock_b + '-' + str(0)
-                    if (record['trade_accuracy_test'][record['model_name'] == model].tolist() != []) :
-                        ROC_test = record['ROC_test'][record['model_name'] == model].iloc[0]
-                        accuracy_test = record['accuracy_test'][record['model_name'] == model].iloc[0]
-
-                        self.links[stock_a].iloc[line] = (ROC_test + accuracy_test)/2
-                    model = stock_a + '-' + stock_b + '-' + str(0)
+                    model = stock_a + '-' + stock_a + '-' + stock_b
                     if (record['trade_accuracy_test'][record['model_name'] == model].tolist() != []) :
                         ROC_test = record['ROC_test'][record['model_name'] == model].iloc[0]
                         accuracy_test = record['accuracy_test'][record['model_name'] == model].iloc[0]
                         self.links[stock_a].iloc[line] = (ROC_test + accuracy_test)/2
+                        
+                    model = stock_a + '-' + stock_b + '-' + stock_a
+                    if (record['trade_accuracy_test'][record['model_name'] == model].tolist() != []) :
+                        ROC_test = record['ROC_test'][record['model_name'] == model].iloc[0]
+                        accuracy_test = record['accuracy_test'][record['model_name'] == model].iloc[0]
+                        self.links[stock_a].iloc[line] = (ROC_test + accuracy_test)/2
+                        
+                    model = stock_a + '-' + stock_b
+                    if (record['trade_accuracy_test'][record['model_name'] == model].tolist() != []) :
+                        ROC_test = record['ROC_test'][record['model_name'] == model].iloc[0]
+                        accuracy_test = record['accuracy_test'][record['model_name'] == model].iloc[0]
+                        self.links[stock_a].iloc[line] = (ROC_test + accuracy_test)/2
+                        
                     line += 1
         
             self.links = self.links.reset_index()
@@ -119,7 +130,7 @@ class market :
         print('Using the following stocks : ', self.use)
         
     def features (self) :
-        price_data = self.price_data.drop(['Open','Close','Date','delta_class','delta','stock'],1)
+        price_data = self.price_data.drop(['Date','delta_class','delta','stock'],1)
                 
         return price_data.columns
         
@@ -147,13 +158,11 @@ class market :
         if self.mode == 1 :
             self.shaps = np.round(np.logspace(-3.5,-1,num=20),4)
             self.shaps = random.choice(self.shaps)
-            extention = self.shaps
         else : 
             self.shaps = ml_parameters['shaps'].iloc[0]
-            extention = 0
         
         if self.mode == 2 :
-            leaves = np.linspace(10,500,20)
+            leaves = np.linspace(10,400,20)
             leaves = int(random.choice(leaves))
         else : 
             leaves = int(ml_parameters['num_leaves'].iloc[0])
@@ -165,13 +174,13 @@ class market :
             depth = int(ml_parameters['max_depth'].iloc[0])
             
         if self.mode == 4 :
-            rate = np.round(np.logspace(-3.5,0,num=20),4)
+            rate = np.round(np.logspace(-3,0,num=20),4)
             rate = random.choice(rate)
         else : 
             rate = ml_parameters['learning_rate'].iloc[0]
             
         if self.mode == 5 :
-            bins = np.linspace(10,500,20)
+            bins = np.linspace(10,1000,20)
             bins = int(random.choice(bins))
         else : 
             bins = int(ml_parameters['bins'].iloc[0])
@@ -183,7 +192,7 @@ class market :
             is_unbalance = bool(int(ml_parameters['is_unbalance'].iloc[0]))
             
         self.train_names = '-'.join(self.use)
-        self.model = self.predict + '-' + self.train_names + '-' + str(extention)
+        self.model = self.predict + '-' + self.train_names + '-' + str(self.shaps)
         
         self.prep()
         y_train = self.y_train
@@ -192,7 +201,7 @@ class market :
         train_data = lgb.Dataset(X_train,label=y_train)
         param = {'num_leaves':leaves, 'objective':'binary','max_depth':depth,
                  'learning_rate':rate,'max_bin':bins,
-                 'num_threads':11, 'verbose': -1, 'is_unbalance': is_unbalance}
+                 'num_threads':6, 'verbose': -1, 'is_unbalance': is_unbalance}
         
         num_round = 100
         lgbm = lgb.train(param,train_data,num_round, verbose_eval=False)
@@ -203,6 +212,7 @@ class market :
         values = np.mean(values, axis=0)
         df = pd.DataFrame({'features' : self.X_test.columns, 'value' : values}).sort_values(by=['value'], ascending=False)
         self.feature_imp = df[df['value']>self.shaps]
+        print('Shaps level : %a' %self.shaps)
         print(lgbm.params)
         if np.shape(self.feature_imp)[0]>0:
             self.parameters = lgbm.params
@@ -263,18 +273,22 @@ class market :
         
         if len(glob.glob('./data/record_model.csv')):
             record = pd.read_csv('./data/record_model.csv')
-            record = record.drop_duplicates(subset=['model_name'], keep='first')
+            record = record.drop_duplicates(subset=['model_name'], keep='last')
             record['date'] = pd.to_datetime(record['date'])
             today = datetime.now()
             recent = today - timedelta(days=7)
             record = record[record['date'] > recent].dropna()
+            
+            # percentage_days = 10
+            # record = record[record['days_traded_test'] > int(150*percentage_days/100)]
+            # record = record[record['days_traded_live'] > int(100*percentage_days/100)]
             
             models = record['model_name'].tolist()
             accuracy_test = np.array(record['trade_accuracy_test'].to_list())#[:-5]
             accuracy_live = np.array(record['trade_accuracy_live'].to_list())
             ROC_live = np.array(record['ROC_live'].to_list())#[:-5]
             ROC_test = np.array(record['ROC_test'].to_list())
-            metric = (accuracy_test + accuracy_live + ROC_live + ROC_test)/4
+            metric = (ROC_live + ROC_test + accuracy_test + accuracy_live)/4
             
             parameters = record.parameters.to_list()
             shaps = [float(model.split('-')[-1]) for model in models]
@@ -313,17 +327,22 @@ class market :
     def execute(self) :
         
         for k in range (0,20):
-            
             #Halt during pre-trading times
             nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
             start = nyc_datetime.replace(hour=7, minute=30, second=0,microsecond=0)
             end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
             if (nyc_datetime > start) & (nyc_datetime < end) :
-                os.system('rm ./data/stock_links.csv')
-                time.sleep((start-end).seconds)
+                time.sleep((end-nyc_datetime).seconds)
+                
+            #Halt before market close    
+            nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+            start = nyc_datetime.replace(hour=15, minute=30, second=0,microsecond=0)
+            end = nyc_datetime.replace(hour=16, minute=5, second=0,microsecond=0)
+            if (nyc_datetime > start) & (nyc_datetime < end) :
+                time.sleep((end-nyc_datetime).seconds)
                 
             self.predict = random.sample(self.possibilities, 1)[0]
-            self.use_n = random.randint(1, 10)
+            self.use_n = random.randint(1, 5)
             self.selector()
             self.use_stocks()
             self.prep()

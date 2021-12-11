@@ -20,18 +20,24 @@ from email_updates_error import *
 warnings.simplefilter(action = 'ignore')
 
 def main():
+    print('\nIn Alpaca Trading\n')
     nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
     api, buying_power, account_value = login()
+    print('\nLogin test --- Completed\n')
     trade = pd.read_csv('./data/to_trade.csv')
     trade_data, trade_value = distribution(api, buying_power)
-    os.system('python email_updates_morning.py')
+    print('\nMoney allocation --- Completed\n')
     open_trade(api, trade_data)
+    print('\nTrading--- Completed\n')
+    os.system('python email_updates_morning.py')
     nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-    close = nyc_datetime.replace(hour=15, minute=59, second=30,microsecond=0)
+    close = nyc_datetime.replace(hour=15, minute=59, second=0,microsecond=0)
     difference = close - nyc_datetime
-    print('Sleeping : ', difference.seconds )
+    print('\nSleeping before market close : %a hours\n'%round((difference.seconds/60)/60,2))
     time.sleep(difference.seconds)
+    print('\nClosing trades\n')
     close_trades(api, account_value, trade_value)
+    print('\nTrades closed\n')
             
 
 def error_handling(error_message) :
@@ -62,8 +68,8 @@ def login() :
         Available funds to trade
     """
     
-    APCA_API_KEY_ID = 'PK6OYPKSRKOJ3EQYT8X6'
-    APCA_API_SECRET_KEY = 'c0ij7l8e7uS1ULMPMk6DQMAlwlWKSTrEEfjgHDxq'
+    APCA_API_KEY_ID = 'PKXJKIRLEZRBAK5GDIX4'
+    APCA_API_SECRET_KEY = 'Z2Q6Uv6N8qR424GVNCcGBze5mJPeEkOHDeImFLoX'
     APCA_API_BASE_URL = 'https://paper-api.alpaca.markets'
     APCA_API_DATA_URL = 'https://data.alpaca.markets'
     APCA_RETRY_MAX = 3	

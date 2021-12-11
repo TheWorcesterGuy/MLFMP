@@ -53,12 +53,13 @@ def make() :
     os.system('touch ./data/history_google_updates.csv')
     
 def clean_features() : 
-    models = glob.glob('./models/*csv') + glob.glob('./Best_models/*csv')
-    models = [x.split('/')[-1].replace('.csv','') for x in models]
-    models = list(set(models))
-    features = pd.read_csv('./data/model_features.csv')
-    to_remove = [x for x in features.columns if x not in models]
-    if len(to_remove)>0:
-        features = features.drop(to_remove, axis=1)
-        features.to_csv('./data/model_features.csv', index = False)
+    if len(glob.glob('./data/model_features.csv')):
+        models = glob.glob('./models/*csv') + glob.glob('./Best_models/*csv')
+        models = [x.split('/')[-1].replace('.csv','') for x in models]
+        models = list(set(models))
+        features = pd.read_csv('./data/model_features.csv')
+        to_remove = [x for x in features.columns if x not in models]
+        if len(to_remove)>0:
+            features = features.drop(to_remove, axis=1)
+            features.to_csv('./data/model_features.csv', index = False)
     

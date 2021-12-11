@@ -55,66 +55,82 @@ def trade_system():
     print('Sub codes called in this system can be changed and updated outside of market hours')
     path = os.getcwd()
     days_running = 0
+    
     while days_running < 100 :
+        
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-        if (nyc_datetime.weekday() != 5) and (nyc_datetime.weekday() != 6) :
+        if (nyc_datetime.weekday() not in [5,6]):
             print('\n In Week trading \n')
-            nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-            end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
-            start = nyc_datetime.replace(hour=8, minute=35, second=0,microsecond=0)
-            if (nyc_datetime < start):
-                nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-                intermediate = nyc_datetime.replace(hour=8, minute=0, second=0,microsecond=0)
-                difference = intermediate - nyc_datetime
-                print('\n Sleeping before first update', round((difference.seconds/60)/60,3), 'hours\n')
-                time.sleep(difference.seconds+1)
-                print('\n updating features store \n')
-                os.system("python3 update_features_store.py")
-                nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-                start = nyc_datetime.replace(hour=8, minute=35, second=1,microsecond=0)
-                difference = start - nyc_datetime
-                print('\n Sleeping before market', round((difference.seconds/60)/60,3), 'hours\n')
-                time.sleep(difference.seconds+1)
-                
-            elif (nyc_datetime > end):
-                start = (nyc_datetime + timedelta(days=1)).replace(hour=7, minute=20, second=0,microsecond=0)
-                nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-                difference = start - nyc_datetime
-                print('\n Sleeping', round((difference.seconds/60)/60,3), 'hours\n')
-                time.sleep(difference.seconds)
+            
             
             nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-            start = nyc_datetime.replace(hour=8, minute=35, second=0,microsecond=0)
-            end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
-            if (nyc_datetime >= start) & (nyc_datetime < end) :
-                #os.system("python3 update_features_store.py")
-                #os.system("python3 reporting_features_store.py")
+            start_first_update = nyc_datetime.replace(hour=7, minute=10, second=2,microsecond=0)
+            if (nyc_datetime < start_first_update):
+                
+                nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+                difference = start_first_update - nyc_datetime
+                print('\nSleeping before first update', round((difference.seconds/60)/60,3), 'hours\n')
+                time.sleep(difference.seconds+1)
+                
+                print('\nFirst early morning update of features store \n')
+                os.system("python3 update_features_store.py > ./log/features_store/update_log.txt")
+                print('\nFirst early morning update of features store --- Completed\n')
+                
+                nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+                difference = nyc_datetime.replace(hour=8, minute=10, second=2,microsecond=0) - nyc_datetime
+                print('\n Sleeping before market', round((difference.seconds/60)/60,3), 'hours\n')
+                time.sleep(difference.seconds+1)
+            
+            
+            nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+            start_trade = nyc_datetime.replace(hour=8, minute=10, second=1,microsecond=0)
+            end_trade = nyc_datetime.replace(hour=8, minute=30, second=0,microsecond=0)
+            if (nyc_datetime < end_trade) :
+                
+                if (nyc_datetime < start_trade) :
+                    difference = start_trade - nyc_datetime
+                    print('\n Sleeping before market', round((difference.seconds/60)/60,3), 'hours\n')
+                    time.sleep(difference.seconds+1)
+                
+                print('\nFinal update of features store \n')
+                os.system("python3 update_features_store.py > ./log/features_store/update_log.txt")
+                os.system("python3 reporting_features_store.py")
+                print('\nFinal update of features store --- Completed\n')
+                print('\nIntiating trading system\n')
+                
                 if len(glob.glob('./data/features_store.csv')) :
-                    os.system("python3 trade.py > ./log/trade_log" + nyc_datetime.strftime('%Y-%m-%d') + ".txt")
+                    os.system("python3 trade.py > ./log/trading/trade_log" + nyc_datetime.strftime('%Y-%m-%d') + ".txt")
                 else :
                     print('\n Features store not available, sleeping until user intervention (or new cycle)')
                     time.sleep(43200)
-
-            nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-            if (nyc_datetime.weekday() == 4):
-                end_week = (nyc_datetime + timedelta(days=1)).replace(hour=1, minute=0, second=1,microsecond=0)
-                difference = end_week - nyc_datetime
-                print('\n Friday evening stoppage, sleeping', round((difference.seconds/60)/60,3), 'hours\n')
+                    
+                    
+            nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))   
+            end_trade = nyc_datetime.replace(hour=8, minute=50, second=0,microsecond=0)
+            if (nyc_datetime > end_trade):
+                start_first_update = (nyc_datetime + timedelta(days=1)).replace(hour=7, minute=0, second=0,microsecond=0)
+                difference = start_first_update - datetime.now(pytz.timezone('US/Eastern'))
+                print('\n Out of model trading hours, sleeping :', round((difference.seconds/60)/60,3), 'hours\n')
                 time.sleep(difference.seconds)
                 
-        elif (nyc_datetime.weekday() == 5) :
-            nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-            end_week = (nyc_datetime + timedelta(days=2)).replace(hour=0, minute=0, second=1,microsecond=0)
+                
+        nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))     
+        if (nyc_datetime.weekday() == 5) :
+            os.system("python3 update_features_store.py > ./log/features_store/update_log.txt")
+            end_week = (nyc_datetime + timedelta(days=1)).replace(hour=0, minute=0, second=1,microsecond=0)
             difference = end_week - nyc_datetime
             print('\n Weekend stoppage (Saturday), sleeping', round((difference.seconds/60)/60,3), 'hours\n')
             time.sleep(difference.seconds)
+            os.system("python3 update_features_store.py > ./log/features_store/update_log.txt")
             
-        elif (nyc_datetime.weekday() == 6) :
-            nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+            
+        nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))   
+        if (nyc_datetime.weekday() == 6) :
             end_week = (nyc_datetime + timedelta(days=1)).replace(hour=0, minute=0, second=1,microsecond=0)
             difference = end_week - nyc_datetime
             print('\n Weekend stoppage (Sunday), sleeping', round((difference.seconds/60)/60,3), 'hours\n')
             time.sleep(difference.seconds)
+            os.system("python3 update_features_store.py > ./log/features_store/update_log.txt")
              
         days_running += 1
     

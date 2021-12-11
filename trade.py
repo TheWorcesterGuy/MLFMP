@@ -42,11 +42,11 @@ class trade :
         
         files = glob.glob('*.{}'.format('csv'))
         self.price_data = pd.read_csv('./data/features_store.csv')
-        self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.95)).dropna()
+        self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.95))
         self.flag_error = 0
         self.path = os.getcwd()
         data = pd.DataFrame({'Date' : [], 'Products' : [], 
-                    'Probabilities': [], 'Model_level': []})
+                    'Probabilities': [], 'Model_level_p': [], 'Model_level_n': [],'Model_performance': []}) 
         data.to_csv('./data/trade_data.csv', index = False)
           
         return
@@ -110,14 +110,14 @@ class trade :
         use = self.use 
         price_data['Date'] = pd.to_datetime(price_data['Date']) # Convert date column to datetime format for subsequent date selection 
         today = price_data['Date'][price_data['stock']==self.predict].iloc[0] # Extract last date in features store, which sould correspond to todays date                     
-        print('Todays features date is %s' %today.date())
+        print('\nTodays features date is %s' %today.date())
         
-        if today.date() != datetime.today().date():
+        if today.date() != (datetime.today()).date():
             self.flag_error = 1
-            print(self.predict, 'is not up to date, it will be skipped')
+            print(self.predict, 'is not up to date, it will be skipped \n')
         else :
             self.price_data_train = price_data[price_data['stock'].isin(use)].loc[(price_data['Date'] < today)]    
-            price_data_test = price_data[price_data['stock'] == self.predict].loc[(price_data['Date'] >= today)] # Extract data for stock to be predicted
+            price_data_test = price_data[price_data['stock'] == self.predict].loc[(price_data['Date'] == today)] # Extract data for stock to be predicted
             
             self.y_train = self.price_data_train['delta_class'].tolist() # Extract all outcomes for training
                 
@@ -169,10 +169,12 @@ class trade :
         trade_probability = df.groupby(['Products']).mean()['Prob_distance']
         Model_performance = df.groupby(['Products']).mean()['Model_performance']
         Probability = df.groupby(['Products']).mean()['Probability']
+        Prob_distance = df.groupby(['Products']).mean()['Prob_distance']
         df = df.groupby(['Products']).sum()
         df['Probability'] = Probability
         df['Balanced_probability'] = trade_probability + 0.5
         df['Model_performance'] = Model_performance
+        df['Prob_distance'] = Prob_distance
         df['K%'] = df['Balanced_probability'] - (1-df['Balanced_probability'])/df['Model_performance']
         df['K%'] = df['K%']/df['K%'].sum()
         df = df.round(4)
@@ -281,6 +283,7 @@ class trade :
         parameters = parameters[model.replace(".csv", "")].iloc[0]
         parameters = eval(parameters.replace('nan','np.nan'))
         self.parameters = dict(parameters)
+        self.parameters['num_threads'] = 11
         self.model = model
         self.predict = hold[0]
         self.use = hold[1:-1]
@@ -391,6 +394,7 @@ class trade :
             Code used to send update email of outcome of days trades, data pulled from 'record.csv'"
         """
         
+        print('\nIn trading system, initiating model training and prediction\n')
         self.cp_models()
         for mdl in self.modellist :
             self.flag_error = 0
@@ -402,19 +406,25 @@ class trade :
                 self.model_prediction()
                 self.model_info(mdl)
                 self.pre_trade_data()
+        
+        print('\nModel training and prediction --- Completed\n')
+        if np.size(pd.read_csv('./data/trade_data.csv'))>0 :
+            self.trade_data()
+            print('\nExecuting alpaca trading \n')
+            os.system("python alpaca_trading.py")
+        
+            nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+            close = nyc_datetime.replace(hour=16, minute=0, second=0,microsecond=0)
+            if nyc_datetime < close:
+                difference = close - nyc_datetime
+                print('\nWaiting for market close', round((difference.seconds/60)/60,2), 'hours\n')
+                time.sleep(difference.seconds+60)
             
-        self.trade_data()
-        os.system("python alpaca_trading.py")
+            self.record()
+            os.system('python email_updates_evening.py')
         
-        nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-        close = nyc_datetime.replace(hour=16, minute=0, second=0,microsecond=0)
-        if nyc_datetime < close:
-            difference = close - nyc_datetime
-            print('\nWaiting for market close', round((difference.seconds/60)/60,2), 'hours\n')
-            time.sleep(difference.seconds+60)
-        
-        self.record()
-        os.system('python email_updates_evening.py')
+        else : 
+            print('\nEmpty trade sheet\n')
 
         return 
     

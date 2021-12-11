@@ -40,13 +40,19 @@ class market :
         self.verify_features_store()
         self.path = os.getcwd()
         self.price_data = pd.read_csv('./data/features_store.csv',',')
-        self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.80))
+        self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.95))
         #Halt during pre-trading times
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-        start = nyc_datetime.replace(hour=7, minute=20, second=0,microsecond=0)
+        start = nyc_datetime.replace(hour=7, minute=30, second=0,microsecond=0)
         end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
         if (nyc_datetime > start) & (nyc_datetime < end) :
-            time.sleep(5400)
+            time.sleep((end-nyc_datetime).seconds)
+        #Halt before market close    
+        nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+        start = nyc_datetime.replace(hour=15, minute=30, second=0,microsecond=0)
+        end = nyc_datetime.replace(hour=16, minute=5, second=0,microsecond=0)
+        if (nyc_datetime > start) & (nyc_datetime < end) :
+            time.sleep((end-nyc_datetime).seconds)
         
     def error_handling(self, error_message) :
         today = datetime.today()
@@ -188,6 +194,7 @@ class market :
         parameters = parameters[model.replace(".csv", "")].iloc[0]
         parameters = eval(parameters.replace('nan','np.nan'))
         self.parameters = dict(parameters)
+        self.parameters['num_threads'] = 4
         self.model = model
         self.predict = hold[0]
         self.use = hold[1:-1]
@@ -298,7 +305,11 @@ class market :
             self.y_test = correct
             self.metric(self.proba)
             self.accuracy_test = accuracy_score(correct, self.prediction, normalize = True) * 100
+            if np.isnan(self.accuracy_test):
+                self.accuracy_test = 0
             self.accuracy_test_trade = accuracy_score(self.y_true_trade, self.y_trade, normalize = True) * 100.0
+            if np.isnan(self.accuracy_test_trade):
+                self.accuracy_test_trade = 0
             self.ROC_test = roc_auc_score(correct, self.proba) * 100
             self.days_test = len(self.y_trade)
             self.model_level_test_p, self.model_level_test_n = self.threshold()
@@ -309,7 +320,7 @@ class market :
             print('Model accuracy over 55% is :', np.round(self.accuracy_test_trade,2))
             print('Model ROC AUC is :', np.round(self.ROC_test,2))
             print('Traded', np.round(int(self.days_test),2), 'days')
-            print('Model trade threshold positice side is', np.round(self.model_level_test_p*100,2))
+            print('Model trade threshold positive side is', np.round(self.model_level_test_p*100,2))
             print('Model trade threshold negative side is', np.round(self.model_level_test_n*100,2))
             
             self.prediction = []
@@ -332,7 +343,11 @@ class market :
             self.y_test = correct
             self.metric(self.proba)
             self.accuracy_live = accuracy_score(correct, self.prediction, normalize = True) * 100
+            if np.isnan(self.accuracy_live):
+                self.accuracy_live = 0
             self.accuracy_live_trade = accuracy_score(self.y_true_trade, self.y_trade, normalize = True) * 100.0
+            if np.isnan(self.accuracy_live_trade):
+                self.accuracy_live_trade = 0
             self.ROC_live = roc_auc_score(correct, self.proba) * 100
             self.days_live = len(self.y_trade)
             self.model_level_live_p, self.model_level_live_n = self.threshold()

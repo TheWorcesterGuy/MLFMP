@@ -9,6 +9,8 @@ Created on Mon Aug 16 04:44:47 2021
 import smtplib, ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from sklearn.metrics import accuracy_score, classification_report
+from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 
@@ -16,36 +18,14 @@ def main():
     port = 587  # For starttls
     smtp_server = "smtp.gmail.com"
     sender_email = "Wilkinson.Chabannes@gmail.com"
-    receiver_emails = ["Wilkinson.Chabannes@gmail.com","chabannes.francois@gmail.com"]
+    receiver_emails = ["christian.s.wilkinson@gmail.com","chabannes.francois@gmail.com"]
     password = 'zemhyp-hasmof-saGwe0'
     
     message = MIMEMultipart("alternative")
     message["Subject"] = "Wilkinson & Chabannes trading : Evening performance update"
-    message["From"] = sender_email
+    message["From"] = sender_email    
     
-    
-    def table_trades() :
-        df = pd.read_csv('./data/record_traded.csv').dropna()
-        df = df[df['Date']==df['Date'].iloc[-1]]
-        df = df.drop(['Date', 'Prob_distance'], axis = 1)
-        delta = df.groupby(['Traded']).mean()['Delta']
-        proba = df.groupby(['Traded']).mean()['Probability']
-        df = df.groupby(['Traded']).sum()
-        df['Delta'] = delta * 100
-        df['Probability'] = proba * 100
-        df = df.round(2)
-        
-        html_table = df.to_html()
-        return html_table
-    
-    def table_account() :
-        df = pd.read_csv('./data/account.csv')
-        df = df[df['Date']==df['Date'].iloc[-1]]
-        table = df.set_index('Date')
-        html_table = table.to_html()
-        return html_table
-
-#np.sum(np.array(df['Prediction'].tolist()) * np.array(df['Delta'].tolist()))/np.sum(np.abs(np.array(df['Prediction'].tolist())))
+    today_table_table, return_table = table_trades()
     
     # Create the plain-text and HTML version of your message
     text = """\
@@ -81,7 +61,7 @@ def main():
         </p>
       </body>
     </html>
-    """ + table_trades() + table_account()
+    """ + today_table_table + table_account() + return_table
     
     
     # Turn these into plain/html MIMEText objects
@@ -99,8 +79,44 @@ def main():
         server.login(sender_email, password)
         for receiver_email in receiver_emails :
             server.sendmail(
-                sender_email, receiver_email, message.as_string()
-            )
+                sender_email, receiver_email, message.as_string())
+
+def table_trades() :
+    df = pd.read_csv('./data/record_traded.csv').dropna()
+    
+    all_trade_accuracy = np.round(accuracy_score(df['Outcome'],df['Prediction'])*100,2)
+    all_return = np.round((df['Prediction']*df['Delta']).mean()*100,2)
+    
+    df = df[df['Date']==df['Date'].iloc[-1]]
+    df = df.drop(['Date', 'Prob_distance'], axis = 1)
+    delta = df.groupby(['Traded']).mean()['Delta']
+    proba = df.groupby(['Traded']).mean()['Probability']
+    df = df.groupby(['Traded']).sum()
+    df['Delta'] = delta * 100
+    df['Probability'] = proba * 100
+    df = df.round(2)
+    
+    today_trade_accuracy = np.round(accuracy_score(df['Outcome'],df['Prediction'])*100,2)
+    today_return = np.round((df['Prediction']*df['Delta']).mean(),2)
+    
+    return_table = pd.DataFrame({'Date': [datetime.today().strftime('%Y - %m - %d')],
+                                 'Trade accuracy today' : [today_trade_accuracy], 
+                                 'Average gain per trade today' : [today_return],
+                                 'Trade accuracy all time' : [all_trade_accuracy],
+                                 'Average gain per trade all time' : [all_return]})
+    return_table = return_table.set_index('Date')
+    
+    today_table = df.to_html()
+    return_table = return_table.to_html()
+    
+    return today_table, return_table
+
+def table_account() :
+    df = pd.read_csv('./data/account.csv')
+    df = df[df['Date']==df['Date'].iloc[-1]]
+    table = df.set_index('Date')
+    html_table = table.to_html()
+    return html_table
             
 if __name__ == "__main__":
     main()

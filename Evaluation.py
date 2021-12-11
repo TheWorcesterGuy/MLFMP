@@ -13,6 +13,7 @@ from sklearn.metrics import plot_roc_curve
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import confusion_matrix, plot_confusion_matrix, ConfusionMatrixDisplay
+from scipy.interpolate import make_interp_spline
 from sklearn import metrics
 import time
 from datetime import datetime, timedelta
@@ -34,19 +35,21 @@ def main():
     evaluation().charts()
     #evaluation().variable()
     #evaluation().money()
-    #evaluation().models_selected()
+    #evaluation().account()
+    #evaluation().models_quality()
     #evaluation().results_traded()
     #evaluation().results_predicted()
     #evaluation().optimizer()
     
 class evaluation :
     def __init__(self):
-        record = pd.read_csv('./data/record_model.csv').dropna()
+        record = pd.read_csv('./data/record_model.csv')
         record = record.drop_duplicates(subset=['model_name'], keep='last')
         record['date'] = pd.to_datetime(record['date'])
         today = datetime.now()
         recent = today - timedelta(days=1)
-        record = record[record['date'] > recent]
+        record = record[record['date'] > recent].dropna()
+        print(record.mean())
         self.record = record.dropna()
         
         
@@ -86,12 +89,14 @@ class evaluation :
         plt.xlabel('Test accuracy threshold')
         plt.ylabel('Mean live accuracy above threshold')
         plt.plot(accuracy_test, mean_live_thr, 'o')
+        plt.yscale('log')
         plt.show()
         
         plt.title('Mean live accuracy over ROC threshold')
         plt.xlabel('Test ROC threshold')
         plt.ylabel('Mean live accuracy above threshold')
         plt.plot(ROC_test, mean_live_ROC_thr, 'o')
+        plt.yscale('log')
         plt.show()
         
         # plt.title('Standard deviation of performance over threshold')
@@ -104,12 +109,14 @@ class evaluation :
         plt.xlabel('Test accuracy threshold')
         plt.ylabel('Live results over threshold')
         plt.plot(accuracy_test, mean_live_perf, 'o')
+        plt.yscale('log')
         plt.show()
         
         plt.title('Trading results over ROC threshold')
         plt.xlabel('Test ROC threshold')
         plt.ylabel('Live results over threshold')
         plt.plot(ROC_test, mean_live_ROC_perf, 'o')
+        plt.yscale('log')
         plt.show()
 
     def variable(self):    
@@ -118,20 +125,30 @@ class evaluation :
         accuracy_live = np.array(record['trade_accuracy_live'].to_list())
         ROC_live = np.array(record['ROC_live'].to_list())#[:-5]
         ROC_test = np.array(record['ROC_test'].to_list())
-        metric = (accuracy_test + accuracy_live + ROC_live + ROC_test)/4
+        metric = (accuracy_live)
+        models = record['model_name'].to_list()
+        models_len = [len(model.split('-')[1:-1]) for model in models]
         #metric = accuracy_live
         
-        # plt.figure()
-        # models = record['model_name'].tolist()
-        # values = [float(x.split('-')[-1]) for x in models]
-        # df = pd.DataFrame({'shaps' : values, 'metric': metric})
-        # df = df[df['shaps']>0]
-        # df = df.groupby(['shaps']).mean().reset_index()
-        # plt.plot(np.array(df['shaps']),np.array(df['metric']),'o')
-        # plt.xscale('log')
-        # plt.xlabel('Shaps level')
-        # plt.ylabel('metric')
-        # plt.show
+        plt.figure()
+        models = record['model_name'].tolist()
+        values = [float(x.split('-')[-1]) for x in models]
+        df = pd.DataFrame({'shaps' : values, 'metric': metric})
+        df = df[df['shaps']>0]
+        df = df.groupby(['shaps']).mean().reset_index()
+        plt.plot(np.array(df['shaps']),np.array(df['metric']),'o')
+        plt.xscale('log')
+        plt.xlabel('Shaps level')
+        plt.ylabel('metric')
+        plt.show
+        
+        plt.figure()
+        df = pd.DataFrame({'length' : models_len, 'metric': metric})
+        df = df.groupby(['length']).mean().reset_index()
+        plt.plot(np.array(df['length']),np.array(df['metric']),'o')
+        plt.xlabel('Model length')
+        plt.ylabel('metric')
+        plt.show
         
         plt.figure()
         record = pd.read_csv('./data/record_model.csv').dropna()
@@ -156,9 +173,31 @@ class evaluation :
         plt.ylabel('metric')
         plt.show
         
+        plt.figure()
+        record = pd.read_csv('./data/record_model.csv').dropna()
+        parameters = record.parameters.to_list()
+        leaves = [eval(x)[0][1] for x in parameters]
+        df = pd.DataFrame({'leaves' : leaves, 'metric': metric})
+        df = df.groupby(['leaves']).mean().reset_index()
+        plt.plot(np.array(df['leaves']),np.array(df['metric']),'o')
+        plt.xlabel('leaves')
+        plt.ylabel('metric')
+        plt.show
+        
+        plt.figure()
+        record = pd.read_csv('./data/record_model.csv').dropna()
+        parameters = record.parameters.to_list()
+        depth = [eval(x)[2][1] for x in parameters]
+        df = pd.DataFrame({'depth' : depth, 'metric': metric})
+        df = df.groupby(['depth']).mean().reset_index()
+        plt.plot(np.array(df['depth']),np.array(df['metric']),'o')
+        plt.xlabel('depth')
+        plt.ylabel('metric')
+        plt.show
+        
     def money(self) :
         
-        df = pd.read_csv('./data/record_model.csv').dropna()
+        df = pd.read_csv('./data/record_model.csv')
         plt.figure()
         df = df.groupby(['accuracy_live']).mean().reset_index()
         plt.plot(np.array(df['accuracy_live']),np.array(df['model_performance_live']),'o')
@@ -166,7 +205,7 @@ class evaluation :
         plt.ylabel('Performance')
         plt.show
         
-        df = pd.read_csv('./data/record_model.csv').dropna()
+        df = pd.read_csv('./data/record_model.csv')
         plt.figure()
         df = df.groupby(['ROC_live']).mean().reset_index()
         plt.plot(np.array(df['ROC_live']),np.array(df['model_performance_live']),'o')
@@ -174,7 +213,7 @@ class evaluation :
         plt.ylabel('Performance')
         plt.show
         
-        df = pd.read_csv('./data/record_model.csv').dropna()
+        df = pd.read_csv('./data/record_model.csv')
         plt.figure()
         df = df.groupby(['ROC_live']).mean().reset_index()
         plt.plot((np.array(df['ROC_live'])+np.array(df['accuracy_live']))/2,np.array(df['model_performance_live']),'o')
@@ -182,16 +221,32 @@ class evaluation :
         plt.ylabel('Performance')
         plt.show
         
-    def models_selected(self):
-        record = pd.read_csv('./data/record_model.csv').dropna()
-        record = record[record['status']==1]
-        record = record.groupby(['date']).sum().reset_index()
-        record['date'] = pd.to_datetime(record['date']) 
+    def account (self) :
+        account = pd.read_csv('./data/account.csv').dropna()
+        account['date'] = pd.to_datetime(account['Date']) 
         plt.figure()
-        plt.plot(record['date'],record['status'],'o')
+        plt.plot(account['Date'],account['AM'],'r', label='AM')
+        plt.plot(account['Date'],account['PM'],'g', label='PM')
         plt.xticks(rotation='vertical')
         plt.xlabel('Date')
-        plt.ylabel('Number of good models')
+        plt.ylabel('Account value')
+        plt.legend()
+        plt.show()
+        
+    def models_quality(self):
+        record = pd.read_csv('./data/record_model.csv').dropna()
+        record = record.drop_duplicates(subset=['model_name'], keep='first')
+        record = record.groupby(['date']).mean().reset_index()
+        record['date'] = pd.to_datetime(record['date']) 
+        plt.figure()
+        plt.plot(record['date'],record['trade_accuracy_test'],'g', label='Accuracy test')
+        plt.plot(record['date'],record['ROC_test'],'--g', label='ROC test')
+        plt.plot(record['date'],record['trade_accuracy_live'],'r', label='Accuracy live')
+        plt.plot(record['date'],record['ROC_live'],'--r', label='ROC live')
+        plt.xticks(rotation='vertical')
+        plt.xlabel('Date')
+        plt.ylabel('Matric')
+        plt.legend()
         plt.show()
 
     def results_traded(self) :
@@ -263,8 +318,11 @@ class evaluation :
         plt.legend()
         plt.show() 
         
-        deltas = record['Delta'].dropna().tolist()
-        plt.plot(probs, deltas, '*')
+        deltas = record['Delta'].dropna()
+        df = pd.DataFrame({'d':deltas,'p':probs})
+        mask = df.index//5
+        df = df.groupby(mask).agg(['mean'])
+        plt.plot(df['p'], df['d'],'*')
         plt.title("Probability to delta curve traded")
         plt.xlabel('Probability')
         plt.ylabel('Delta')
@@ -383,7 +441,10 @@ class evaluation :
         plt.show() 
         
         deltas = record['Delta'].dropna().tolist()
-        plt.plot(probs, deltas, '*')
+        df = pd.DataFrame({'d':deltas,'p':probs})
+        mask = df.index//20
+        df = df.groupby(mask).agg(['mean'])
+        plt.plot(df['p'], df['d'],'*')
         plt.title("Probability to delta curve all predictions")
         plt.xlabel('Probability')
         plt.ylabel('Delta')
