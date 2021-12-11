@@ -61,8 +61,6 @@ def main():
     print(df)
     print('features store updated')
 
-    #os.system("rm ./data/*features_trading.csv")
-    #os.system("rm ./data/*features_twitter.csv")
 
     stop = datetime.now()
     

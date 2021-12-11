@@ -233,6 +233,14 @@ df = df_metric.merge(df_metric_sample, on='stock', how='outer')
 df.to_csv('./log/features_store/features_store_log.csv', index=False)
 
 
+
+
+# delete feature files
+os.system("rm ./data/*features_trading.csv")
+os.system("rm ./data/*features_twitter.csv")
+os.system("rm ./data/*minute_price_features.csv")
+
+
 """# APPLY HEALTH CHECK
 my_file = Path("./data/top_50.csv")
 if my_file.is_file():
