@@ -14,6 +14,22 @@ import warnings
 warnings.simplefilter(action='ignore')
 
 
+"""
+DOCUMENTATION
+
+
+The update of the feature store can be launch at any time but the program might get paused in order to respect the following constraints
+
+-	Tweets download can occur only after minute 35. This ensures that the daily tweets are fully downloaded in everyday prod scenario. 
+-	Google Trends must be downloaded after minute 10. This ensures that the previous hour Google Trend is fully ready for download.
+
+The current recommended execution of this program is :
+
+-	First update of the feature store at 7:40 to download most of the tweets.
+-	Second update of the feature store at 8:10 to download the Google Trends and downloading the last tweets of the day.
+"""
+
+
 def main():
 
     update_start_date = pd.Timestamp.today().strftime('%Y-%m-%d %H:%M')
@@ -37,6 +53,7 @@ def main():
     stop_high_res_price = datetime.now()
 
     # update google trends download and create features
+    wait_for_time(10, 'Google Trends')
     os.system("python download_google_trends.py")
     apply_parallel_command(10, "./create_google_trends_features.py", google_trends_dir)
 
@@ -49,6 +66,7 @@ def main():
     stop_trade = datetime.now()
 
     # update tweet download and create features
+    wait_for_time(35, 'Tweets')
     apply_parallel_command(6, "./download_tweets.py", stocks)
     apply_parallel_command(6, "./encode_tweets.py", stocks)
     apply_parallel_command(3, "./create_twitter_features.py", stocks)
@@ -155,6 +173,16 @@ def merge_files(stocks):
     df = df.sort_values('Date', ascending=False)
 
     return df
+    
+def wait_for_time(time_minute, source_name):
+    
+    now_minute = datetime.now().minute
+    
+    while now_minute < time_minute:
+        print('Waiting. %s must be downloaded after HH:%s' % (source_name, time_minute))
+        time.sleep(60)
+        now_minute = datetime.now().minute
+
 
 
 if __name__ == "__main__":
