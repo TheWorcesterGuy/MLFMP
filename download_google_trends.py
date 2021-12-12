@@ -277,7 +277,7 @@ def check_update_validity():
 
     else:
         print("This is the weekend : running 'fill_google_trend_holes.py'")
-        os.system('python fill_google_trend_holes.py')
+        #os.system('python fill_google_trend_holes.py')
 
 
 if __name__ == "__main__":
