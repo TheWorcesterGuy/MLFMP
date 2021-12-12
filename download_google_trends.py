@@ -25,13 +25,13 @@ def main():
     # Check if Google Trend update is allowed
     check_update_validity()
 
-    # google_trends = ['FB', 'SPY', 'AMD', 'AAPL', 'AMZN', 'QQQ', 'TSLA', 'MSFT',
-    #                 'INTC', 'DIS', 'JPM', 'WMT', 'NFLX', 'GOOG', 'GOOGL', 'NVDA', 'TWTR',
-    #                 'debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk',
-    #                  ['bullish', 'bearish'], 'investing.com']
-
     google_trends = ['FB', 'SPY', 'AMD', 'AAPL', 'AMZN', 'QQQ', 'TSLA', 'MSFT',
-                    'INTC', 'DIS', 'JPM', 'WMT', 'NFLX', 'GOOG', 'GOOGL', 'NVDA', 'TWTR', 'VIX']
+                    'INTC', 'DIS', 'JPM', 'WMT', 'NFLX', 'GOOG', 'GOOGL', 'NVDA', 'TWTR',
+                    'debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk',
+                     ['bullish', 'bearish'], 'investing.com']
+
+    # google_trends = ['FB', 'SPY', 'AMD', 'AAPL', 'AMZN', 'QQQ', 'TSLA', 'MSFT',
+    #                 'INTC', 'DIS', 'JPM', 'WMT', 'NFLX', 'GOOG', 'GOOGL', 'NVDA', 'TWTR', 'VIX']
 
     if os.path.isfile('./data/temp_data.csv'):
         os.system('rm ./data/temp_data.csv')
@@ -280,6 +280,7 @@ def check_update_validity():
 
     else:
         print("This is the weekend : running 'fill_google_trend_holes.py'")
+        exit(0)
         #os.system('python fill_google_trend_holes.py')
 
 
