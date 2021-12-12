@@ -9,15 +9,13 @@ import glob
 import sys
 import os
 import numpy as np
-
-
 import time
+
 
 keyword = sys.argv[1]
 
 
 def main():
-
 
     files = glob.glob('data/TWITTER_DATA/%s/*.csv' % keyword)
     files = [file for file in files if 'encoded' not in file]
@@ -52,23 +50,8 @@ def main():
 
         end_date = start_date + pd.DateOffset(days=delta_days + 2)
 
-        maxTweets = 999999999
-
-        tweets_list = []
-
-        # Using TwitterSearchScraper to scrape data and append tweets to list
-        for i, tweet in enumerate(sntwitter.TwitterSearchScraper('%s since:%s-%s-%s until:%s-%s-%s' %
-                                                                 ('$%s' % keyword, start_date.year, start_date.month,
-                                                                  start_date.day, end_date.year, end_date.month,
-                                                                  end_date.day)).get_items()):
-            if i > maxTweets:
-                break
-
-            if tweet.lang == 'en' and tweet.content.count('$') < 3: # and '#' not in tweet.content and 'http' not in tweet.content and '@' not in tweet.content:
-                tweets_list.append([tweet.date, tweet.content, tweet.retweetCount, tweet.likeCount, tweet.user.followersCount])
-
-        tweets_df = pd.DataFrame(tweets_list,
-                                 columns=['Datetime', 'Text', 'retweetCount', 'likeCount', 'nbFollowers'])
+        # download tweets with API query
+        tweets_df = download(keyword, start_date, end_date, 10)
 
         df = pd.concat([df, tweets_df], axis=0)
         df['date'] = df['Datetime'].dt.date
@@ -91,6 +74,35 @@ def main():
             if df_year_week.empty is False:
                 df_year_week.to_csv('data/TWITTER_DATA/%s/tweets_%s_%s_%s.csv' % (keyword, keyword, year, week), index=False)
     print('Done downloading %s ' % keyword)
+
+
+def download(stock, start_date, end_date, tries):
+    for i in range(tries):
+        try:
+            tweets_list = []
+
+            # Using TwitterSearchScraper to scrape data and append tweets to list
+            for i, tweet in enumerate(sntwitter.TwitterSearchScraper('%s since:%s-%s-%s until:%s-%s-%s' %
+                                                                     (
+                                                                     '$%s' % keyword, start_date.year, start_date.month,
+                                                                     start_date.day, end_date.year, end_date.month,
+                                                                     end_date.day)).get_items()):
+
+                if tweet.lang == 'en' and tweet.content.count(
+                        '$') < 3:  # and '#' not in tweet.content and 'http' not in tweet.content and '@' not in tweet.content:
+                    tweets_list.append(
+                        [tweet.date, tweet.content, tweet.retweetCount, tweet.likeCount, tweet.user.followersCount])
+
+            tweets_df = pd.DataFrame(tweets_list,
+                                     columns=['Datetime', 'Text', 'retweetCount', 'likeCount', 'nbFollowers'])
+
+            return tweets_df
+
+        except:
+            if i == tries - 1:
+                raise ValueError('Failed to download tweets for stock %s after %s retries' % (stock, tries))
+            time.sleep(2)
+            continue
 
 
 if __name__ == "__main__":
