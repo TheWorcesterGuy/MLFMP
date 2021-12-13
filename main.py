@@ -116,12 +116,12 @@ def trade_system():
                 
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))     
         if (nyc_datetime.weekday() == 5) :
-            os.system("python3 update_features_store.py > ./log/features_store/update_log.txt")
+            #os.system("python3 update_features_store.py > ./log/features_store/update_log.txt")
             end_week = (nyc_datetime + timedelta(days=1)).replace(hour=0, minute=0, second=1,microsecond=0)
             difference = end_week - nyc_datetime
             print('\n Weekend stoppage (Saturday), sleeping', round((difference.seconds/60)/60,3), 'hours\n')
             time.sleep(difference.seconds)
-            os.system("python3 update_features_store.py > ./log/features_store/update_log.txt")
+            #os.system("python3 update_features_store.py > ./log/features_store/update_log.txt")
             
             
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))   
@@ -130,7 +130,7 @@ def trade_system():
             difference = end_week - nyc_datetime
             print('\n Weekend stoppage (Sunday), sleeping', round((difference.seconds/60)/60,3), 'hours\n')
             time.sleep(difference.seconds)
-            os.system("python3 update_features_store.py > ./log/features_store/update_log.txt")
+            #os.system("python3 update_features_store.py > ./log/features_store/update_log.txt")
              
         days_running += 1
     

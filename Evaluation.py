@@ -32,11 +32,11 @@ warnings.simplefilter(action = 'ignore')
 def main():
     print('\n Evaluating recorded models \n')
 
-    evaluation().charts()
+    #evaluation().charts()
     #evaluation().variable()
     #evaluation().money()
     #evaluation().account()
-    #evaluation().models_quality()
+    evaluation().models_quality()
     #evaluation().results_traded()
     #evaluation().results_predicted()
     #evaluation().optimizer()
@@ -62,9 +62,9 @@ class evaluation :
         record = record[record['days_traded_live'] > int(100*percentage_days)]
         
         #record = record[record['status'] > 0]
-        accuracy_test = sorted(record['trade_accuracy_test'].to_list())[:-5]
+        accuracy_test = sorted(record['trade_accuracy_test'].to_list())[:-10]
         accuracy_live = record['trade_accuracy_live'].to_list()
-        ROC_test = sorted(record['ROC_test'].to_list())[:-5]
+        ROC_test = sorted(record['ROC_test'].to_list())[:-10]
         
         mean_live_thr = []
         mean_live_perf = []
@@ -235,7 +235,11 @@ class evaluation :
         
     def models_quality(self):
         record = pd.read_csv('./data/record_model.csv').dropna()
-        record = record.drop_duplicates(subset=['model_name'], keep='first')
+        percentage_days = 10
+        percentage_days = percentage_days/100
+        record = record[record['days_traded_test'] > int(150*percentage_days)]
+        record = record[record['days_traded_live'] > int(100*percentage_days)]
+        record = record.drop_duplicates(subset=['model_name'], keep='last')
         record = record.groupby(['date']).mean().reset_index()
         record['date'] = pd.to_datetime(record['date']) 
         plt.figure()

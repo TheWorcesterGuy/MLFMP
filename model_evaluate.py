@@ -362,7 +362,7 @@ class market :
             print('Model trade threshold negative side is', np.round(self.model_level_live_n*100,2))
             
             n_best_models = len(glob.glob(os.getcwd() + '/Best_models/*.{}'.format('csv')))
-            pass_threshold = 57 + (n_best_models/30)
+            pass_threshold = 58 + (n_best_models/40)
             percent_days = 10/100
             print('\n Using pass threshold of', np.round(pass_threshold,2))
             if  (self.ROC_test > pass_threshold) &  (self.ROC_live > pass_threshold) & \
