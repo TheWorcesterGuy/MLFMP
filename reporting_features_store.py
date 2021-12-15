@@ -155,22 +155,16 @@ stocks = ['INTC', 'TSLA', 'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GO
 
 df_last_twitters = []
 for stock in stocks:
-    files = glob.glob('./data/TWITTER_DATA/%s/encoded_data/*.csv' % stock)
-    for file in files:
-        if str(datetime.today().isocalendar()[1]) in file and str(datetime.today().year) in file:
-            last_file = file
-    df_last_twitter = pd.read_csv(last_file)
-    df_last_twitter = df_last_twitter.sort_values('Datetime').dropna() #### to be fixed
-
-    df_last_twitter = df_last_twitter.tail(1)
+    df_last_twitter = pd.read_csv('./data/%s_features_twitter.csv' % stock)
+    df_last_twitter = df_twitter_stock[df_twitter_stock['Date'] == df_twitter_stock['Date'].max()]
     df_last_twitter['stock'] = stock
-    df_last_twitter = df_last_twitter[['stock', 'Datetime', 'compound']]
-    df_last_twitter = df_last_twitter.rename(columns={'Datetime': 'last_datetime_utc'})
-
+    df_last_twitter = df_last_twitter[['stock', 'Date', 'nb_tweet_1$', 'nb_tweet_2$']]
     df_last_twitters.append(df_last_twitter)
 
 df = pd.concat(df_last_twitters, axis=0)
 df.to_csv('./log/features_store/twitter_data.csv', index=False)
+
+
 
 
 # REPORT ON THE NANS VARIABLES
