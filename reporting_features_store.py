@@ -156,7 +156,7 @@ stocks = ['INTC', 'TSLA', 'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GO
 df_last_twitters = []
 for stock in stocks:
     df_last_twitter = pd.read_csv('./data/%s_features_twitter.csv' % stock)
-    df_last_twitter = df_twitter_stock[df_twitter_stock['Date'] == df_twitter_stock['Date'].max()]
+    df_last_twitter = df_last_twitter[df_last_twitter['Date'] == df_last_twitter['Date'].max()]
     df_last_twitter['stock'] = stock
     df_last_twitter = df_last_twitter[['stock', 'Date', 'nb_tweet_1$', 'nb_tweet_2$']]
     df_last_twitters.append(df_last_twitter)
