@@ -159,6 +159,10 @@ if google_trend in ['INTC', 'TSLA',  'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 
 	df = df_h.merge(df_d, on='date', how='inner')
 
 
+# if mood google trend, only daily aggregation
+else:
+	df = df_d
+
 
 # Drop first nans due to shifts:
 df = df.rename(columns={'date': 'Date'})
