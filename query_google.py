@@ -35,6 +35,15 @@ else:
     keyword = ' '.join(keywords)
     keyword_query = [keyword]
 
+                     
+# set search category
+if keyword in ['FB', 'SPY', 'AMD', 'AAPL', 'AMZN', 'QQQ', 'TSLA', 'MSFT',
+                    'INTC', 'DIS', 'JPM', 'WMT', 'NFLX', 'GOOG', 'GOOGL', 'NVDA', 'TWTR', 'BAC', 'PG', 'VIX']:
+    search_cat = 1163  # specifically related to financial markets
+
+else:
+    search_cat = 7 # broadly related to finance
+
 
 time_ref = pd.date_range("%s-%s-%s 00:00:00" % (year_start, month_start, day_start),
                          "%s-%s-%s 00:00:00" % (year_end, month_end, day_end), freq="1H") \
@@ -46,7 +55,7 @@ df = pytrends.get_historical_interest(keyword_query, year_start=year_start, mont
                                       day_start=day_start,
                                       hour_start=0, year_end=year_end, month_end=month_end,
                                       day_end=day_end,
-                                      hour_end=0, cat=7, geo='', gprop='')
+                                      hour_end=0, cat=search_cat, geo='', gprop='')
 if df.empty:
     df = pd.DataFrame(columns=['date'] + keyword_query + ['isPartial'])
 

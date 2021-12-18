@@ -95,17 +95,19 @@ class features:
         # create ratios of downs last N days
         price_data['down'] = 0
         price_data.loc[price_data['change_in_price'] < 0, 'down'] = 1
+        
 
-        for k in range(1, 13):
+        for k in range(1, 15):
             price_data['down_%s' % k] = price_data['down'].shift(k)
 
-        price_data['percent_down_last_3_days'] = np.round(price_data[['down_1', 'down_2', 'down_3']].mean(axis=1), 2) * 100
-        price_data['percent_down_last_6_days'] = np.round(price_data[['down_1', 'down_2', 'down_3', 'down_4', 'down_5',
-                                                           'down_6']].mean(axis=1), 2) * 100
-        price_data['percent_down_last_12_days'] = np.round(price_data[['down_1', 'down_2', 'down_3', 'down_4', 'down_5', 'down_6',
-                           'down_7', 'down_8', 'down_9', 'down_10', 'down_11', 'down_12']].mean(axis=1), 2) * 100
+        price_data['percent_down_last_4_days'] = np.round(price_data[['down_1', 'down_2', 'down_3', 'down_4']].mean(axis=1), 2) * 100
+        price_data['percent_down_last_7_days'] = np.round(price_data[['down_1', 'down_2', 'down_3', 'down_4', 'down_5',
+                                                           'down_6', 'down_7']].mean(axis=1), 2) * 100
+        price_data['percent_down_last_14_days'] = np.round(price_data[['down_1', 'down_2', 'down_3', 'down_4', 'down_5', 'down_6',
+                           'down_7', 'down_8', 'down_9', 'down_10', 'down_11', 'down_12', 'down_13', 'down_14']].mean(axis=1), 2) * 100
 
-        for k in range(1, 13):
+        del price_data['down']
+        for k in range(1, 15):
             del price_data['down_%s' % k]
 
         per = [3, 5, 10, 20, 25, 50, 100, 200, 500]
@@ -230,8 +232,8 @@ class features:
         relative_strength_index = 100.0 - (100.0 / (1.0  + relative_strength))
             
         # Add the info to the data frame.
-        price_data['down_days3'] = down_df['change_in_price']
-        price_data['up_days3'] = up_df['change_in_price']
+        #price_data['down_days3'] = down_df['change_in_price']
+        #price_data['up_days3'] = up_df['change_in_price']
         price_data['RSI3'] = relative_strength_index
         price_data['RSI3_signal'] = relative_strength_index - relative_strength_index.transform(lambda x: x.ewm(span = 7).mean())
 
@@ -261,8 +263,8 @@ class features:
         relative_strength_index = 100.0 - (100.0  /  (1.0  + relative_strength))
         
         # Add the info to the data frame.
-        price_data['down_days7'] = down_df['change_in_price']
-        price_data['up_days7'] = up_df['change_in_price']
+        #price_data['down_days7'] = down_df['change_in_price']
+        #price_data['up_days7'] = up_df['change_in_price']
         price_data['RSI7'] = relative_strength_index
         price_data['RSI7_signal'] = relative_strength_index - relative_strength_index.transform(lambda x: x.ewm(span = 7).mean())
         
@@ -292,8 +294,8 @@ class features:
         relative_strength_index = 100.0 - (100.0  /  (1.0  + relative_strength))
         
         # Add the info to the data frame.
-        price_data['down_days14'] = down_df['change_in_price']
-        price_data['up_days14'] = up_df['change_in_price']
+        #price_data['down_days14'] = down_df['change_in_price']
+        #price_data['up_days14'] = up_df['change_in_price']
         price_data['RSI14'] = relative_strength_index
         price_data['RSI14_signal'] = relative_strength_index - relative_strength_index.transform(lambda x: x.ewm(span = 7).mean())
         
@@ -323,8 +325,8 @@ class features:
         relative_strength_index = 100.0 - (100.0  /  (1.0  + relative_strength))
         
         # Add the info to the data frame.
-        price_data['down_days30'] = down_df['change_in_price']
-        price_data['up_days30'] = up_df['change_in_price']
+        #price_data['down_days30'] = down_df['change_in_price']
+        #price_data['up_days30'] = up_df['change_in_price']
         price_data['RSI30'] = relative_strength_index
         price_data['RSI30_signal'] = relative_strength_index - relative_strength_index.transform(lambda x: x.ewm(span = 7).mean())
         

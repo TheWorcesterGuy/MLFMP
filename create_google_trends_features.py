@@ -42,6 +42,8 @@ df['date'] = df['date'].apply(lambda x: x.replace(tzinfo=None))
 df['date'] = pd.to_datetime(df['date'])
 df['date'] = df['date'] + pd.DateOffset(hours=16)
 
+
+
 # remove holidays and weekends
 df = df[df.date.dt.dayofweek < 5]
 
@@ -69,44 +71,94 @@ for col in df.columns[1:]:
 # Replace 0s by -0.1 (so that whole days of zeros are negative but punctual zeros don't have any impact)
 df.loc[df[df.columns[1:].tolist()].sum(axis=1) == 0, df.columns[1:].tolist()] = -0.1
 
-# Average Google trends daily
-df['date'] = df['date'].dt.date
-df = df.groupby('date', as_index=False).mean()
+
+
+
+# DAILY AGGREGATION (AVERAGE)
+df_d = df.copy()
+df_d['date'] = df_d['date'].dt.date
+df_d = df_d.groupby('date', as_index=False).mean()
 
 
 # Rename stock names with generic name 'stock'
-for col in df.columns:
-    if col in ['facebook stock', 'SPY', 'AMD', 'AAPL', 'AMZN', 'QQQ', 'TSLA', 'MSFT',
-               'INTC', 'DIS', 'JPM', 'WMT', 'NFLX', 'GOOG', 'GOOGL', 'NVDA', 'TWTR']:
-        df.rename(columns={col: 'stock'}, inplace=True)
+for col in df_d.columns:
+    if col in ['INTC', 'TSLA',  'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
+              'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG']:
+        df_d.rename(columns={col: 'stock'}, inplace=True)
 
 # Create delta features
 # for couple keywords
 if google_trend == 'bullish_bearish':
-    df['delta_bullish_bearish'] = df['bullish'] - df['bearish']
-    for col in df.columns[1:]:
+    df_d['delta_bullish_bearish'] = df_d['bullish'] - df_d['bearish']
+    for col in df_d.columns[1:]:
 
-        df['GT_%s_delta1' % col] = (df[col] - df[col].shift(1)) / (df[col].shift(1) + 1)
-        df['GT_%s_delta2' % col] = (df[col] - df[col].shift(2)) / (df[col].shift(2) + 1)
-        df['GT_%s_delta3' % col] = (df[col] - df[col].shift(3)) / (df[col].shift(3) + 1)
-        df['GT_%s_delta4' % col] = (df[col] - df[col].shift(4)) / (df[col].shift(4) + 1)
-        df['GT_%s_delta1_smooth' % col] = (df[col] + df[col].shift(1)) / (df[col].shift(2) + df[col].shift(3) + 1)
-        df['GT_%s_delta2_smooth' % col] = (df[col].shift(2) + df[col].shift(3)) / (df[col].shift(4) + df[col].shift(5) + 1)
-        df['GT_%s' % col] = df[col]
+        df_d['GT_%s_delta1' % col] = (df_d[col] - df_d[col].shift(1)) / (df_d[col].shift(1) + 1)
+        df_d['GT_%s_delta2' % col] = (df_d[col] - df_d[col].shift(2)) / (df_d[col].shift(2) + 1)
+        df_d['GT_%s_delta3' % col] = (df_d[col] - df_d[col].shift(3)) / (df_d[col].shift(3) + 1)
+        df_d['GT_%s_delta4' % col] = (df_d[col] - df_d[col].shift(4)) / (df_d[col].shift(4) + 1)
+        df_d['GT_%s_delta1_smooth' % col] = (df_d[col] + df_d[col].shift(1)) / (df_d[col].shift(2) + df_d[col].shift(3) + 1)
+        df_d['GT_%s_delta2_smooth' % col] = (df_d[col].shift(2) + df_d[col].shift(3)) / (df_d[col].shift(4) + df_d[col].shift(5) + 1)
+        df_d['GT_%s' % col] = df_d[col]
 
 
 # for single keywords:
 else:
-    for col in df.columns[1:]:
-        df['GT_%s_delta1' % col] = (df[col] - df[col].shift(1)) / (df[col].shift(1) + 1)
-        df['GT_%s_delta2' % col] = (df[col] - df[col].shift(2)) / (df[col].shift(2) + 1)
-        df['GT_%s_delta3' % col] = (df[col] - df[col].shift(3)) / (df[col].shift(3) + 1)
-        df['GT_%s_delta4' % col] = (df[col] - df[col].shift(4)) / (df[col].shift(4) + 1)
-        df['GT_%s_delta1_smooth' % col] = (df[col] + df[col].shift(1)) / (df[col].shift(2) + df[col].shift(3) + 1)
-        df['GT_%s_delta2_smooth' % col] = (df[col].shift(2) + df[col].shift(3)) / (
-                    df[col].shift(4) + df[col].shift(5) + 1)
-        df['GT_%s' % col] = df[col]
-        del df[col]
+    for col in df_d.columns[1:]:
+        df_d['GT_%s_delta1' % col] = (df_d[col] - df_d[col].shift(1)) / (df_d[col].shift(1) + 1)
+        df_d['GT_%s_delta2' % col] = (df_d[col] - df_d[col].shift(2)) / (df_d[col].shift(2) + 1)
+        df_d['GT_%s_delta3' % col] = (df_d[col] - df_d[col].shift(3)) / (df_d[col].shift(3) + 1)
+        df_d['GT_%s_delta4' % col] = (df_d[col] - df_d[col].shift(4)) / (df_d[col].shift(4) + 1)
+        df_d['GT_%s_delta1_smooth' % col] = (df_d[col] + df_d[col].shift(1)) / (df_d[col].shift(2) + df_d[col].shift(3) + 1)
+        df_d['GT_%s_delta2_smooth' % col] = (df_d[col].shift(2) + df_d[col].shift(3)) / (
+                    df_d[col].shift(4) + df_d[col].shift(5) + 1)
+        df_d['GT_%s' % col] = df_d[col]
+        del df_d[col]
+
+
+
+
+# HOURLY AGGREGATION (only for stock keywords)
+
+if google_trend in ['INTC', 'TSLA',  'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
+              'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG']:
+
+	# compute delta between GT of opening (9 am) and GT of closing (3pm)
+	df_h_peaks = df.copy()
+	df_h_peaks['hour'] = df_h_peaks['date'].dt.hour
+	df_h_peaks = df_h_peaks[df_h_peaks['hour'].isin([1, 7])]   # matches for google trends of 9am, 3pm of previous day
+	df_h_peaks['date'] = df_h_peaks['date'].dt.date
+	df_h_peaks['hour'] = df_h_peaks['hour'].astype(str)
+	df_h_peaks = pd.pivot_table(df_h_peaks, values=google_trend, index='date', columns='hour')
+	df_h_peaks.columns = list(map("".join, df_h_peaks.columns))
+	df_h_peaks['delta_GT_peaks'] = (1 - (df_h_peaks['1'] / df_h_peaks['7'])) * 100
+	df_h_peaks['delta_GT_peaks'] = df_h_peaks['delta_GT_peaks'].fillna(-999)
+	df_h_peaks = df_h_peaks.drop(['1', '7'], axis=1)
+
+
+	# Compute opening Google Trends (6am and 7am)
+	df_h_opening = df.copy()
+	df_h_opening['hour'] = df_h_opening['date'].dt.hour
+	df_h_opening = df_h_opening[df_h_opening['hour'].isin([22, 23])]   # matches for google trends of 6am, 7pm of current
+	df_h_opening['date'] = df_h_opening['date'].dt.date
+	df_h_opening['hour'] = df_h_opening['hour'].astype(str)
+	df_h_opening = pd.pivot_table(df_h_opening, values=google_trend, index='date', columns='hour')
+	df_h_opening.columns = list(map("".join, df_h_opening.columns))
+	df_h_opening['mean_GT_opening'] = (df_h_opening['22'] + df_h_opening['23']) / 2
+	df_h_opening = df_h_opening.drop(['22', '23'], axis=1)
+
+	# create deltas
+	df_h_opening['mean_GT_opening_delta1'] = (df_h_opening['mean_GT_opening'] - df_h_opening['mean_GT_opening'].shift(1)) / (df_h_opening['mean_GT_opening'] + 1)
+	df_h_opening['mean_GT_opening_delta2'] = (df_h_opening['mean_GT_opening'] - df_h_opening['mean_GT_opening'].shift(2)) / (df_h_opening['mean_GT_opening'] + 1)
+	df_h_opening = df_h_opening.drop('mean_GT_opening', axis=1)
+
+	# merge both features hourly together
+	df_h = df_h_peaks.merge(df_h_opening, on='date', how='inner')
+	
+	
+	# join hourly features on daily features 
+	df = df_h.merge(df_d, on='date', how='inner')
+
+
 
 # Drop first nans due to shifts:
 df = df.rename(columns={'date': 'Date'})
