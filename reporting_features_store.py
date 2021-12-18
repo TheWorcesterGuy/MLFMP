@@ -36,7 +36,7 @@ for stock in stocks:
 
     # check google mood features
     moods = ['debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk',
-                         'investing.com', 'bullish_bearish']
+                         'investing.com']
     min_date = '3000-12-31'
     for mood in moods:
         df_google_mood = pd.read_csv('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (mood, mood))
@@ -120,7 +120,7 @@ df_price_report.to_csv('./log/features_store/price_data.csv', index=False)
 # CHECK ON THE GOOGLE TRENDS DATA
 google_trends_dir = ['INTC', 'TSLA', 'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
         	  'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG', 'debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk',
-                     'bullish_bearish', 'investing.com']
+                     'investing.com']
 
 
 df_last_google_trends = []

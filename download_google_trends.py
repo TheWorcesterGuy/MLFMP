@@ -27,7 +27,7 @@ def main():
 
     google_trends = ['INTC', 'TSLA', 'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
         	  'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG', 'debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk',
-                    'bullish_bearish', 'investing.com']
+                    'investing.com']
 
     if os.path.isfile('./data/temp_data.csv'):
         os.system('rm ./data/temp_data.csv')
