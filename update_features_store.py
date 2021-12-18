@@ -38,10 +38,9 @@ def main():
     stocks = ['INTC', 'TSLA',  'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
               'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG']
 
-    google_trends_dir = ['facebook stock', 'SPY', 'AMD', 'AAPL', 'AMZN', 'QQQ', 'TSLA', 'MSFT',
-                     'INTC', 'DIS', 'JPM', 'WMT', 'NFLX', 'GOOG', 'GOOGL', 'NVDA', 'TWTR',
-                     'debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk',
-                         'investing.com', 'bullish_bearish']
+    google_trends_dir = ['INTC', 'TSLA', 'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
+        	  'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG', 'debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk',
+                    'bullish_bearish', 'investing.com']
 
     start = datetime.now()
     t0 = time.time()
@@ -128,29 +127,18 @@ def apply_parallel_command(max_processes, command, list_argument, env_path=None)
 def merge_files(stocks):
     df_list = []
     for stock in stocks:
+
+        # load the 4 sources for the stock
         df_price = pd.read_csv('./data/%s_features_trading.csv' % stock)
         df_twitter = pd.read_csv('./data/%s_features_twitter.csv' % stock)
         df_minute_price = pd.read_csv('./data/%s_minute_price_features.csv' % stock)
-
-        # get matching google stock keyword for a given stock name
-        if stock == 'FB':
-            google_keyword = 'facebook stock'
-        else:
-            google_keyword = stock
-
-        # we don't have google trends for all stocks yet
-        if os.path.exists('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (google_keyword,
-                                                                                           google_keyword)):
-            df_trend = pd.read_csv('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (google_keyword,
-                                                                                                    google_keyword))
-            df_merged = reduce(lambda left, right: pd.merge(left, right, on=['Date'],
+        df_trend = pd.read_csv('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (stock, stock))
+        
+        # merge sources together
+        df_merged = reduce(lambda left, right: pd.merge(left, right, on=['Date'],
                                                      how='inner'), [df_price, df_twitter, df_minute_price, df_trend])
-            df_list.append(df_merged)
-            #os.system(" rm './data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv'" % (stock, stock))
-        else:
-            df_merged = reduce(lambda left, right: pd.merge(left, right, on=['Date'],
-                                                            how='inner'), [df_price, df_twitter, df_minute_price])
-            df_list.append(df_merged)
+        df_list.append(df_merged)
+
 
     df = pd.concat(df_list)
 
@@ -167,8 +155,6 @@ def merge_files(stocks):
         df_mood_trend = pd.read_csv('./data/GOOGLE_TRENDS/mood_features_g.csv')
         df = df.merge(df_mood_trend, on='Date', how='inner')
         os.system('rm ./data/GOOGLE_TRENDS/mood_features_g.csv')
-        
-    #os.system('rm ./data/*_minute_price_features.csv')
 
     df = df.sort_values('Date', ascending=False)
 

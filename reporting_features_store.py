@@ -25,10 +25,7 @@ for stock in stocks:
 
     # check google stock features
     try:
-        if stock == 'FB':
-            df_google_stock = pd.read_csv('./data/GOOGLE_TRENDS/facebook stock/encoded_data/facebook stock_features_google.csv')
-        else:
-            df_google_stock = pd.read_csv('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (stock, stock))
+        df_google_stock = pd.read_csv('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (stock, stock))
         df_google_stock = df_google_stock[df_google_stock['Date'] == df_google_stock['Date'].max()]
         df_google_stock['source'] = 'google_stock'
         df_google_stock['stock'] = stock
@@ -121,9 +118,8 @@ df_price_report.to_csv('./log/features_store/price_data.csv', index=False)
 
 
 # CHECK ON THE GOOGLE TRENDS DATA
-google_trends_dir = ['facebook stock', 'SPY', 'AMD', 'AAPL', 'AMZN', 'QQQ', 'TSLA', 'MSFT',
-                 'INTC', 'DIS', 'JPM', 'WMT', 'NFLX', 'GOOG', 'GOOGL', 'NVDA', 'TWTR',
-                 'debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk',
+google_trends_dir = ['INTC', 'TSLA', 'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
+        	  'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG', 'debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk',
                      'bullish_bearish', 'investing.com']
 
 
