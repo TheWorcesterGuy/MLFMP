@@ -52,9 +52,9 @@ def main():
     stop_high_res_price = datetime.now()
 
     # update google trends download and create features
-    wait_for_time(10, 'Google Trends')
-    os.system("python download_google_trends.py")
-    apply_parallel_command(10, "./create_google_trends_features.py", google_trends_dir)
+    #wait_for_time(10, 'Google Trends')
+    #os.system("python download_google_trends.py")
+    #apply_parallel_command(10, "./create_google_trends_features.py", google_trends_dir)
 
     stop_google_trends = datetime.now()
 
@@ -132,29 +132,29 @@ def merge_files(stocks):
         df_price = pd.read_csv('./data/%s_features_trading.csv' % stock)
         df_twitter = pd.read_csv('./data/%s_features_twitter.csv' % stock)
         df_minute_price = pd.read_csv('./data/%s_minute_price_features.csv' % stock)
-        df_trend = pd.read_csv('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (stock, stock))
+        #df_trend = pd.read_csv('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (stock, stock))
         
         # merge sources together
         df_merged = reduce(lambda left, right: pd.merge(left, right, on=['Date'],
-                                                     how='inner'), [df_price, df_twitter, df_minute_price, df_trend])
+                                                     how='inner'), [df_price, df_twitter, df_minute_price])  #df_trend
         df_list.append(df_merged)
 
 
     df = pd.concat(df_list)
 
     # merge encoded moods together to get a general mood features dataframe
-    mood_list_df = []
-    for mood in ['debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk']:
-        mood_list_df.append(pd.read_csv('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (mood, mood)))
+    #mood_list_df = []
+    #for mood in ['debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk']:
+        #mood_list_df.append(pd.read_csv('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (mood, mood)))
 
-    df_mood = reduce(lambda df1, df2: pd.merge(df1, df2, on='Date', how='inner'), mood_list_df)
-    df_mood.to_csv('./data/GOOGLE_TRENDS/mood_features_g.csv', index=False)
+    #df_mood = reduce(lambda df1, df2: pd.merge(df1, df2, on='Date', how='inner'), mood_list_df)
+    #df_mood.to_csv('./data/GOOGLE_TRENDS/mood_features_g.csv', index=False)
 
     # add the google trends reflecting the mood of traders (common for all stocks)
-    if os.path.exists('./data/GOOGLE_TRENDS/mood_features_g.csv'):
-        df_mood_trend = pd.read_csv('./data/GOOGLE_TRENDS/mood_features_g.csv')
-        df = df.merge(df_mood_trend, on='Date', how='inner')
-        os.system('rm ./data/GOOGLE_TRENDS/mood_features_g.csv')
+    #if os.path.exists('./data/GOOGLE_TRENDS/mood_features_g.csv'):
+        #df_mood_trend = pd.read_csv('./data/GOOGLE_TRENDS/mood_features_g.csv')
+        #df = df.merge(df_mood_trend, on='Date', how='inner')
+        #os.system('rm ./data/GOOGLE_TRENDS/mood_features_g.csv')
 
     df = df.sort_values('Date', ascending=False)
 
