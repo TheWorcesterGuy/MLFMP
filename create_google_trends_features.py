@@ -40,7 +40,11 @@ else:
 # Google trends after 8:00 am (NY time) included are considered for the next day, which means we shift forward by 16 hours
 df['date'] = df['date'].apply(lambda x: x.replace(tzinfo=None))
 df['date'] = pd.to_datetime(df['date'])
-df['date'] = df['date'] + pd.DateOffset(hours=16)
+
+# In prod, the last 10 hours can't be used (not reliable). The last hour used at 8h30 NY time is therefore the Google Trend of 9pm of previous day.
+# 9pm of previous day must become mightnight (end of day) of next day
+df['date'] = df['date'] + pd.DateOffset(hours=27)
+
 
 
 
@@ -122,41 +126,21 @@ else:
 if google_trend in ['INTC', 'TSLA',  'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
               'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG']:
 
-	# compute delta between GT of opening (9 am) and GT of closing (3pm)
+	# compute delta between GT of opening (9 am) and GT of closing (4pm)
 	df_h_peaks = df.copy()
 	df_h_peaks['hour'] = df_h_peaks['date'].dt.hour
-	df_h_peaks = df_h_peaks[df_h_peaks['hour'].isin([1, 7])]   # matches for google trends of 9am, 3pm of previous day
+	df_h_peaks = df_h_peaks[df_h_peaks['hour'].isin([12, 19])]   # matches for google trends of 9am, 16pm of previous day
 	df_h_peaks['date'] = df_h_peaks['date'].dt.date
 	df_h_peaks['hour'] = df_h_peaks['hour'].astype(str)
 	df_h_peaks = pd.pivot_table(df_h_peaks, values=google_trend, index='date', columns='hour')
 	df_h_peaks.columns = list(map("".join, df_h_peaks.columns))
-	df_h_peaks['delta_GT_peaks'] = (1 - (df_h_peaks['1'] / df_h_peaks['7'])) * 100
+	df_h_peaks['delta_GT_peaks'] = (1 - (df_h_peaks['12'] / df_h_peaks['19'])) * 100
 	df_h_peaks['delta_GT_peaks'] = df_h_peaks['delta_GT_peaks'].fillna(-999)
-	df_h_peaks = df_h_peaks.drop(['1', '7'], axis=1)
+	df_h_peaks = df_h_peaks.drop(['12', '19'], axis=1)
 
-
-	# Compute opening Google Trends (6am and 7am)
-	df_h_opening = df.copy()
-	df_h_opening['hour'] = df_h_opening['date'].dt.hour
-	df_h_opening = df_h_opening[df_h_opening['hour'].isin([22, 23])]   # matches for google trends of 6am, 7pm of current
-	df_h_opening['date'] = df_h_opening['date'].dt.date
-	df_h_opening['hour'] = df_h_opening['hour'].astype(str)
-	df_h_opening = pd.pivot_table(df_h_opening, values=google_trend, index='date', columns='hour')
-	df_h_opening.columns = list(map("".join, df_h_opening.columns))
-	df_h_opening['mean_GT_opening'] = (df_h_opening['22'] + df_h_opening['23']) / 2
-	df_h_opening = df_h_opening.drop(['22', '23'], axis=1)
-
-	# create deltas
-	df_h_opening['mean_GT_opening_delta1'] = (df_h_opening['mean_GT_opening'] - df_h_opening['mean_GT_opening'].shift(1)) / (df_h_opening['mean_GT_opening'] + 1)
-	df_h_opening['mean_GT_opening_delta2'] = (df_h_opening['mean_GT_opening'] - df_h_opening['mean_GT_opening'].shift(2)) / (df_h_opening['mean_GT_opening'] + 1)
-	df_h_opening = df_h_opening.drop('mean_GT_opening', axis=1)
-
-	# merge both features hourly together
-	df_h = df_h_peaks.merge(df_h_opening, on='date', how='inner')
-	
 	
 	# join hourly features on daily features 
-	df = df_h.merge(df_d, on='date', how='inner')
+	df = df_h_peaks.merge(df_d, on='date', how='inner')
 
 
 # if mood google trend, only daily aggregation
@@ -166,7 +150,6 @@ else:
 
 # Drop first nans due to shifts:
 df = df.rename(columns={'date': 'Date'})
-
 
 # save encoded features
 if os.path.isdir('./data/GOOGLE_TRENDS/%s/encoded_data' % google_trend) is False:
