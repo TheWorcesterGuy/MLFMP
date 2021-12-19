@@ -116,7 +116,7 @@ df_price_report = df_price_report.reset_index(drop=True)
 df_price_report.to_csv('./log/features_store/price_data.csv', index=False)
 
 
-
+"""
 # CHECK ON THE GOOGLE TRENDS DATA
 google_trends_dir = ['INTC', 'TSLA', 'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
         	  'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG', 'debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk',
@@ -142,7 +142,7 @@ for google_trend in google_trends_dir:
 
 df = pd.concat(df_last_google_trends, axis=0)
 df.to_csv('./log/features_store/google_trend_data.csv', index=False)
-
+"""
 
 
 # CHECK ON TWITTER DATA
