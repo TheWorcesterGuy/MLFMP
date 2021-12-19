@@ -26,8 +26,9 @@ def main():
     check_update_validity()
 
     google_trends = ['INTC', 'TSLA', 'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
-        	  'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG', 'debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk',
-                    'investing.com']
+        	  'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG', 'VIX', 'debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'stock risk',
+                     'investing.com']
+
 
     if os.path.isfile('./data/temp_data.csv'):
         os.system('rm ./data/temp_data.csv')
@@ -98,7 +99,8 @@ def main():
                 df = df[df['date'] < datetime.now(pytz.timezone('US/Eastern')) - pd.Timedelta(hours=1)]
 
                 print('Last row downloaded : ', df) #.tail(1))
-
+                df = df.iloc[:-10] # last 10 hours are not reliable
+                print(df)
                 df.to_csv(filename, index=False)
                 start_date = df['date'].max()
 
@@ -201,7 +203,9 @@ def main():
                 df = df[df['date'] < datetime.now(pytz.timezone('US/Eastern')) - pd.Timedelta(hours=1)]
 
                 print('Last row downloaded : ', df) #.tail(1))
-
+                df = df.iloc[:-10] # last 10 hours are not reliable
+                print(df)
+                
                 df.to_csv(filename, index=False)
                 start_date = df['date'].max()
 
