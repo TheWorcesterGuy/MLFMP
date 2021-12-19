@@ -99,7 +99,7 @@ def main():
                 df = df[df['date'] < datetime.now(pytz.timezone('US/Eastern')) - pd.Timedelta(hours=1)]
 
                 print('Last row downloaded : ', df) #.tail(1))
-                df = df.iloc[:-12] # last 12 hours are not reliable
+                df = df.iloc[:-13] # last 13 hours are not reliable
                 print(df)
                 df.to_csv(filename, index=False)
                 start_date = df['date'].max()
@@ -203,7 +203,7 @@ def main():
                 df = df[df['date'] < datetime.now(pytz.timezone('US/Eastern')) - pd.Timedelta(hours=1)]
 
                 print('Last row downloaded : ', df) #.tail(1))
-                df = df.iloc[:-12] # last 12 hours are not reliable
+                df = df.iloc[:-13] # last 13 hours are not reliable
                 print(df)
                 
                 df.to_csv(filename, index=False)
