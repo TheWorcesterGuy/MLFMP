@@ -37,13 +37,12 @@ else:
     print('Error : empty folder for %s' % google_trend)
     exit(0)
 
-# Google trends after 8:00 am (NY time) included are considered for the next day, which means we shift forward by 16 hours
 df['date'] = df['date'].apply(lambda x: x.replace(tzinfo=None))
 df['date'] = pd.to_datetime(df['date'])
 
-# In prod, the last 10 hours can't be used (not reliable). The last hour used at 8h30 NY time is therefore the Google Trend of 9pm of previous day.
+# In prod, the last 12 hours can't be used (not reliable). The last hour used at 8h30 NY time is therefore the Google Trend of 7pm of previous day.
 # 9pm of previous day must become mightnight (end of day) of next day
-df['date'] = df['date'] + pd.DateOffset(hours=27)
+df['date'] = df['date'] + pd.DateOffset(hours=29)
 
 
 
@@ -129,14 +128,14 @@ if google_trend in ['INTC', 'TSLA',  'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 
 	# compute delta between GT of opening (9 am) and GT of closing (4pm)
 	df_h_peaks = df.copy()
 	df_h_peaks['hour'] = df_h_peaks['date'].dt.hour
-	df_h_peaks = df_h_peaks[df_h_peaks['hour'].isin([12, 19])]   # matches for google trends of 9am, 16pm of previous day
+	df_h_peaks = df_h_peaks[df_h_peaks['hour'].isin([14, 21])]   # matches for google trends of 9am, 16pm of previous day
 	df_h_peaks['date'] = df_h_peaks['date'].dt.date
 	df_h_peaks['hour'] = df_h_peaks['hour'].astype(str)
 	df_h_peaks = pd.pivot_table(df_h_peaks, values=google_trend, index='date', columns='hour')
 	df_h_peaks.columns = list(map("".join, df_h_peaks.columns))
-	df_h_peaks['delta_GT_peaks'] = (1 - (df_h_peaks['12'] / df_h_peaks['19'])) * 100
+	df_h_peaks['delta_GT_peaks'] = (1 - (df_h_peaks['14'] / df_h_peaks['21'])) * 100
 	df_h_peaks['delta_GT_peaks'] = df_h_peaks['delta_GT_peaks'].fillna(-999)
-	df_h_peaks = df_h_peaks.drop(['12', '19'], axis=1)
+	df_h_peaks = df_h_peaks.drop(['14', '21'], axis=1)
 
 	
 	# join hourly features on daily features 
