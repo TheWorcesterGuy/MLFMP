@@ -22,10 +22,10 @@ import random
 warnings.simplefilter(action='ignore')
 
 def main():
-    print('\n Creating price & econometric features for %s ...' % sys.argv[1])
-    features(symbol = sys.argv[1]).execute()
-    print(' Done creating price features for %s' % sys.argv[1])
-    #features(symbol='AAPL').execute() # This line is reserved for testing
+    #print('\n Creating price & econometric features for %s ...' % sys.argv[1])
+    #features(symbol = sys.argv[1]).execute()
+    #print(' Done creating price features for %s' % sys.argv[1])
+    features(symbol='AAPL').execute() # This line is reserved for testing
 
 
 class features:
@@ -43,11 +43,16 @@ class features:
         
         today = datetime.today()
 
-        World_tickers = ['^FCHI','^STOXX50E','^AEX','000001.SS','^HSI','^N225','^BSESN','^SSMI','^IBEX']
-        Reinforce_tickers = ['^VVIX','^VIX','SPY', 'QQQ','GC=F','CL=F','SI=F','EURUSD=X','JPY=X',
-                     'XLF','XLK','XLV','XLY', 'INTC', 'AMZN', 'FB', 'AAPL', 'DIS', 'TSLA', 'GOOG', 
-                     'GOOGL', 'MSFT', 'NFLX', 'NVDA', 'TWTR', 'AMD', 'WMT', 
-                     'JPM',  'BAC', 'PG']
+        # World_tickers = ['^FCHI','^STOXX50E','^AEX','000001.SS','^HSI','^N225','^BSESN','^SSMI','^IBEX']
+        #Reinforce_tickers = ['^VVIX','^VIX','SPY', 'QQQ','GC=F','CL=F','SI=F','EURUSD=X','JPY=X',
+                     #'XLF','XLK','XLV','XLY', 'INTC', 'AMZN', 'FB', 'AAPL', 'DIS', 'TSLA', 'GOOG', 
+                     #'GOOGL', 'MSFT', 'NFLX', 'NVDA', 'TWTR', 'AMD', 'WMT', 
+                     #'JPM',  'BAC', 'PG']
+
+        World_tickers = ['^FCHI', '^STOXX50E', '^AEX', '^IBEX']
+        Reinforce_tickers = ['^VVIX','^VIX','SPY', 'QQQ']
+        if self.symbol not in Reinforce_tickers:
+        	Reinforce_tickers.append(self.symbol)
 
         combinations = [0, 1, 2, 3, 5, 7, 10, 15, 20, 50]
         
@@ -59,18 +64,46 @@ class features:
             support = self.get_price(wt)
             support.set_index('Date', inplace=True)
             for k in combinations:
-                price_data[wt + str(k)] = ((support['Open'].shift(-1) - support['Close'].shift(k)) / support['Close'].shift(k)) * 100
+                col = wt + ' - ' + str(k)
+                price_data[col] = ((support['Open'].shift(-1) - support['Close'].shift(k)) / support['Close'].shift(k)) * 100
             price_data[wt + ' High ' + str(0)] = ((support['High'] - support['Low']) / support['Open']) * 100
         
         for rt in Reinforce_tickers:
             reinf = self.get_price(rt)
             reinf.set_index('Date', inplace=True)
+
+            rt_g = rt
+            if rt == self.symbol and self.symbol not in ['QQQ', 'SPY']:
+                rt_g = 'stock'
+
             for j in combinations:
-                price_data[rt + ' - ' + str(j)] = ((reinf['Open'] - reinf['Close'].shift(j)) / reinf['Close'].shift(j)) * 100
-            price_data[rt + ' High ' + str(1)] = ((reinf['High'] - reinf['Low']) / reinf['Open']) * 100
+                col = rt_g + ' - ' + str(j)
+                price_data[col] = ((reinf['Open'] - reinf['Close'].shift(j)) / reinf['Close'].shift(j)) * 100
+
+            price_data[rt_g + ' High ' + str(1)] = ((reinf['High'] - reinf['Low']) / reinf['Open']) * 100
             
             if len(np.where(price_data.columns == 'Adj Close')[0]) > 0 :
                 price_data = price_data.drop(['Adj Close'], 1)
+
+        # copy all the 'stock' features for QQQ and SPY (features order must be identical)
+        if self.symbol in ['QQQ', 'SPY']:
+            for j in combinations:
+                price_data['stock - %s' % j] = price_data['%s - %s' % (self.symbol, j)]
+            price_data['stock High 1'] = price_data['%s High 1' % self.symbol]
+
+
+        # normalize each delta price features using the variation over the last 150 days
+        to_normalize_columns = price_data.columns[price_data.columns.get_loc('symbol') + 1:]
+        for col in to_normalize_columns:
+
+            delta_cols = []
+            for k in range(1, 151):
+                price_data['delta_%s' % k] = np.abs(price_data[col].shift(k))
+                delta_cols.append('delta_%s' % k)
+            delta_cols.append('delta_%s' % k)
+            price_data['mean_abs_delta'] = price_data[delta_cols].mean(axis=1)
+            price_data[col] = price_data[col] / price_data['mean_abs_delta']
+            price_data = price_data.drop(delta_cols + ['mean_abs_delta'], axis=1)
         
         price_data['change_in_price'] = (price_data['Close'] - price_data['Open'])
         
