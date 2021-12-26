@@ -49,7 +49,7 @@ class features:
                      #'GOOGL', 'MSFT', 'NFLX', 'NVDA', 'TWTR', 'AMD', 'WMT', 
                      #'JPM',  'BAC', 'PG']
 
-        World_tickers = ['^FCHI', '^STOXX50E', '^AEX', '^IBEX']
+        World_tickers = ['^FCHI','^STOXX50E','^AEX','000001.SS','^HSI','^N225','^BSESN','^SSMI','^IBEX']
         Reinforce_tickers = ['^VVIX','^VIX','SPY', 'QQQ']
         if self.symbol not in Reinforce_tickers:
             Reinforce_tickers.append(self.symbol)
@@ -661,6 +661,7 @@ class features:
         price_data = self.price_data
         price_data = price_data.drop(['Open', 'Close', 'High', 'Low', 'Volume', 'symbol', 'change_in_price'], axis=1)
         price_data.to_csv('./data/%s_features_trading.csv' % self.symbol)
+        print(price_data.tail(1))
         
     def execute(self) :
         self.data_collect_price()
