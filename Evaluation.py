@@ -37,9 +37,8 @@ def main():
     #evaluation().money()
     #evaluation().account()
     evaluation().models_quality()
-    #evaluation().results_traded()
-    #evaluation().results_predicted()
-    #evaluation().optimizer()
+    evaluation().results_traded()
+    evaluation().results_predicted()
     
 class evaluation :
     def __init__(self):
@@ -90,14 +89,16 @@ class evaluation :
         plt.ylabel('Mean live accuracy above threshold')
         plt.plot(accuracy_test, mean_live_thr, 'o')
         plt.yscale('log')
-        plt.show()
+        plt.savefig('./Images/Mean live accuracy over threshold.png')
+        #plt.show()
         
         plt.title('Mean live accuracy over ROC threshold')
         plt.xlabel('Test ROC threshold')
         plt.ylabel('Mean live accuracy above threshold')
         plt.plot(ROC_test, mean_live_ROC_thr, 'o')
         plt.yscale('log')
-        plt.show()
+        plt.savefig('./Images/Mean live accuracy over ROC threshold.png')
+        #plt.show()
         
         # plt.title('Standard deviation of performance over threshold')
         # plt.xlabel('Test accuracy threshold')
@@ -110,14 +111,16 @@ class evaluation :
         plt.ylabel('Live results over threshold')
         plt.plot(accuracy_test, mean_live_perf, 'o')
         plt.yscale('log')
-        plt.show()
+        plt.savefig('./Images/Trading results over threshold.png')
+        #plt.show()
         
         plt.title('Trading results over ROC threshold')
         plt.xlabel('Test ROC threshold')
         plt.ylabel('Live results over threshold')
         plt.plot(ROC_test, mean_live_ROC_perf, 'o')
         plt.yscale('log')
-        plt.show()
+        plt.savefig('./Images/Trading results over ROC threshold.png')
+        #plt.show()
 
     def variable(self):    
         record = pd.read_csv('./data/record_model.csv').dropna()
@@ -140,7 +143,7 @@ class evaluation :
         plt.xscale('log')
         plt.xlabel('Shaps level')
         plt.ylabel('metric')
-        plt.show
+        plt.show()
         
         plt.figure()
         df = pd.DataFrame({'length' : models_len, 'metric': metric})
@@ -160,7 +163,7 @@ class evaluation :
         plt.xlabel('learning rate')
         plt.xscale('log')
         plt.ylabel('metric')
-        plt.show
+        plt.show()
         
         plt.figure()
         record = pd.read_csv('./data/record_model.csv').dropna()
@@ -171,7 +174,7 @@ class evaluation :
         plt.plot(np.array(df['bins']),np.array(df['metric']),'o')
         plt.xlabel('bins')
         plt.ylabel('metric')
-        plt.show
+        plt.show()
         
         plt.figure()
         record = pd.read_csv('./data/record_model.csv').dropna()
@@ -182,7 +185,7 @@ class evaluation :
         plt.plot(np.array(df['leaves']),np.array(df['metric']),'o')
         plt.xlabel('leaves')
         plt.ylabel('metric')
-        plt.show
+        plt.show()
         
         plt.figure()
         record = pd.read_csv('./data/record_model.csv').dropna()
@@ -193,7 +196,7 @@ class evaluation :
         plt.plot(np.array(df['depth']),np.array(df['metric']),'o')
         plt.xlabel('depth')
         plt.ylabel('metric')
-        plt.show
+        plt.show()
         
     def money(self) :
         
@@ -251,7 +254,8 @@ class evaluation :
         plt.xlabel('Date')
         plt.ylabel('Matric')
         plt.legend()
-        plt.show()
+        plt.savefig('./Images/models_quality.png')
+        #plt.show()
 
     def results_traded(self) :
         record = pd.read_csv('./data/record_traded.csv')
@@ -296,8 +300,10 @@ class evaluation :
                                        display_labels=target_names)
         fig, ax = plt.subplots(figsize=(10,10))
         cmp.plot(ax=ax)
-        plt.show()
+        plt.savefig('./Images/results_traded.png')
+        #plt.show()
         
+        plt.figure()
         probs = record['Probability'].dropna().tolist()
         y_true = np.array([int(float(i)) for i in record['Outcome'].tolist()])
         y_pred = np.array([int(float(i)) for i in record['Prediction'].tolist()])
@@ -320,8 +326,10 @@ class evaluation :
         plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r', label='Chance', alpha=.8)
         plt.title("ROC traded")
         plt.legend()
-        plt.show() 
+        plt.savefig('./Images/ROC traded.png')
+        #plt.show() 
         
+        plt.figure()
         deltas = record['Delta'].dropna()
         df = pd.DataFrame({'d':deltas,'p':probs})
         mask = df.index//5
@@ -330,7 +338,8 @@ class evaluation :
         plt.title("Probability to delta curve traded")
         plt.xlabel('Probability')
         plt.ylabel('Delta')
-        plt.show()
+        plt.savefig('./Images/Probability to delta curve traded.png')
+        #plt.show()
         
         probability = np.array(probability)
         plt.rcParams["figure.figsize"] = 10, 5
@@ -371,7 +380,8 @@ class evaluation :
         ax2.set_ylabel("Accuracy",color="red",fontsize=14)
         plt.title("Veracity Traded")
         plt.legend()
-        plt.show()
+        plt.savefig('./Images/Veracity Traded.png')
+        #plt.show()
         
     def results_predicted(self) :
         record = pd.read_csv('./data/record_all_predictions.csv')
@@ -418,7 +428,8 @@ class evaluation :
                                        display_labels=target_names)
         fig, ax = plt.subplots(figsize=(10,10))
         cmp.plot(ax=ax)
-        plt.show()
+        plt.savefig('./Images/results_predicted.png')
+        #plt.show()
         
         probs = record['Probability'].dropna().tolist()
         y_true = np.array([int(float(i)) for i in record['Outcome'].tolist()])
@@ -442,8 +453,10 @@ class evaluation :
         plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r', label='Chance', alpha=.8)
         plt.title("ROC all predictions")
         plt.legend()
-        plt.show() 
+        plt.savefig('./Images/ROC all predictions.png')
+        #plt.show() 
         
+        plt.figure()
         deltas = record['Delta'].dropna().tolist()
         df = pd.DataFrame({'d':deltas,'p':probs})
         mask = df.index//20
@@ -452,7 +465,8 @@ class evaluation :
         plt.title("Probability to delta curve all predictions")
         plt.xlabel('Probability')
         plt.ylabel('Delta')
-        plt.show()
+        plt.savefig('./Images/Probability to delta curve all predictions.png')
+        #plt.show()
         
         probability = np.array(probability)
         plt.rcParams["figure.figsize"] = 10, 5
@@ -493,108 +507,8 @@ class evaluation :
         ax2.set_ylabel("Accuracy",color="red",fontsize=14)
         plt.title("Veracity all predictions")
         plt.legend()
-        plt.show() 
-        
-    def optimizer(self) :
-        
-        record = pd.read_csv('./data/record_model.csv')
-        record['Date'] = pd.to_datetime(record['Date'])
-        end_date = datetime.today() - pd.Timedelta("1 days")
-        record = record.loc[(record['Date'] > end_date)]
-        parameters = record['Parameters'].tolist()
-        Weekly_Trade_accuracy = record['Weekly_Trade_accuracy'].tolist()
-        df_parameters = pd.DataFrame()
-        for i in range (len(parameters)):
-            df = pd.DataFrame(eval(parameters[i]), columns=['paramater', 'value'])
-            df = df.set_index('paramater')
-            df = df.T
-            df['accuracy'] = Weekly_Trade_accuracy[i]
-            df_parameters = df_parameters.append(df, ignore_index=True)
-        
-        num_leaves = df_parameters['num_leaves'].to_list()        
-        points = list(set(num_leaves))
-        num_leaves = np.array(num_leaves)
-        accuracy = np.array(df_parameters['accuracy'].to_list())
-        y_value = []
-        y_error = []
-        for point in points :
-            pos = np.where(num_leaves == point)
-            y_error.append(np.std(accuracy[pos]))
-            y_value.append(np.mean(accuracy[pos]))
-            
-        plt.errorbar(points, y_value,
-             yerr = y_error,
-             fmt ='o')
-        plt.title("f(num_leaves) = Accuracy")
-        z = np.polyfit(np.array(points).flatten(),  np.array(y_value).flatten(), 1)
-        p = np.poly1d(z)
-        plt.plot(np.array(points), p(np.array(points)),"r-", label = "y=%.6fx+%.6f"%(z[0],z[1]))
-        plt.legend()
-        plt.show()
-        
-        max_depth = df_parameters['max_depth'].to_list()        
-        points = list(set(max_depth))
-        max_depth = np.array(max_depth)
-        accuracy = np.array(df_parameters['accuracy'].to_list())
-        y_value = []
-        y_error = []
-        for point in points :
-            pos = np.where(max_depth == point)
-            y_error.append(np.std(accuracy[pos]))
-            y_value.append(np.mean(accuracy[pos]))
-            
-        plt.errorbar(points, y_value,
-             yerr = y_error,
-             fmt ='o')
-        plt.title("f(max_depth) = Accuracy")
-        z = np.polyfit(np.array(points).flatten(),  np.array(y_value).flatten(), 1)
-        p = np.poly1d(z)
-        plt.plot(np.array(points), p(np.array(points)),"r-", label = "y=%.6fx+%.6f"%(z[0],z[1]))
-        plt.legend()
-        plt.show()
-        
-        learning_rate = df_parameters['learning_rate'].to_list()        
-        points = list(set(learning_rate))
-        learning_rate = np.array(learning_rate)
-        accuracy = np.array(df_parameters['accuracy'].to_list())
-        y_value = []
-        y_error = []
-        for point in points :
-            pos = np.where(learning_rate == point)
-            y_error.append(np.std(accuracy[pos]))
-            y_value.append(np.mean(accuracy[pos]))
-            
-        plt.errorbar(points, y_value,
-             yerr = y_error,
-             fmt ='o')
-        plt.title("f(learning_rate) = Accuracy")
-        z = np.polyfit(np.array(points).flatten(),  np.array(y_value).flatten(), 1)
-        p = np.poly1d(z)
-        #plt.plot(np.array(points), p(np.array(points)),"r-", label = "y=%.6fx+%.6f"%(z[0],z[1]))
-        plt.legend()
-        plt.xscale('log')
-        plt.show()
-        
-        bins = df_parameters['max_bin'].to_list()        
-        points = list(set(bins))
-        bins = np.array(bins)
-        accuracy = np.array(df_parameters['accuracy'].to_list())
-        y_value = []
-        y_error = []
-        for point in points :
-            pos = np.where(bins == point)
-            y_error.append(np.std(accuracy[pos]))
-            y_value.append(np.mean(accuracy[pos]))
-            
-        plt.errorbar(points, y_value,
-             yerr = y_error,
-             fmt ='o')
-        plt.title("f(bins) = Accuracy")
-        z = np.polyfit(np.array(points).flatten(),  np.array(y_value).flatten(), 1)
-        p = np.poly1d(z)
-        plt.plot(np.array(points), p(np.array(points)),"r-", label = "y=%.6fx+%.6f"%(z[0],z[1]))
-        plt.legend()
-        plt.show()
+        plt.savefig('./Images/Veracity all predictions.png')
+        #plt.show() 
         
         
 if __name__ == "__main__":

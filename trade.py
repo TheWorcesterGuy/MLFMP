@@ -216,13 +216,13 @@ class trade :
             prob = np.array([])
             model_performance = np.array([])
             for i in range(len(probability)) :
-                if (probability[i] > 0.5) & (probability[i] > level_p[i]):
+                if (probability[i] > 0.75) :
                     side = np.append(side, 1)
                     prob_distance = np.append(prob_distance, probability[i] - level_p[i])
                     product = np.append(product, stock)
                     prob = np.append(prob, probability[i])
                     model_performance = np.append(model_performance, 0.01*performance[i]/(1-performance[i]*0.01))
-                if (probability[i] < 0.5) & ((1-probability[i]) > level_n[i]):
+                if (probability[i] < 0.25) :
                     side = np.append(side, -1)
                     prob_distance = np.append(prob_distance, (1-probability[i]) - level_n[i])
                     product = np.append(product, stock)
@@ -234,7 +234,6 @@ class trade :
             to_trade = to_trade.append(df, ignore_index=True)
         
         to_trade.to_csv('./data/to_trade.csv', index = False)
-        self.distribution()
         
                         
     def model_info(self, model) :
@@ -410,9 +409,14 @@ class trade :
         print('\nModel training and prediction --- Completed\n')
         if np.size(pd.read_csv('./data/trade_data.csv'))>0 :
             self.trade_data()
-            print('\nExecuting alpaca trading \n')
-            os.system("python alpaca_trading.py")
-        
+
+            if np.size(pd.read_csv('./data/to_trade.csv'))>0 :
+                self.distribution()
+                print('\nExecuting alpaca trading \n')
+                os.system("python alpaca_trading.py")
+            else :
+                print('\nNo trades above set probability level\n')
+
             nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
             close = nyc_datetime.replace(hour=16, minute=0, second=0,microsecond=0)
             if nyc_datetime < close:
@@ -424,7 +428,7 @@ class trade :
             os.system('python email_updates_evening.py')
         
         else : 
-            print('\nEmpty trade sheet\n')
+            print('\nEmpty trade sheet - No models or none up to date\n')
 
         return 
     

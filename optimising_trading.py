@@ -72,7 +72,8 @@ ax2=ax.twinx()
 ax2.plot(level, days,color="red", label = 'Trades per day')
 ax2.set_ylabel('Trades per day',color="red",fontsize=14)
 plt.legend(loc='upper left')
-plt.show()
+plt.savefig('./Images/trades per day per level.png')
+#plt.show()
 
 
 plt.figure()
@@ -85,7 +86,8 @@ ax2=ax.twinx()
 ax2.plot(level, delta,color="red", label = 'Return')
 ax2.set_ylabel('Average daily delta',color="red",fontsize=14)
 plt.legend(loc='upper left')
-plt.show()
+plt.savefig('./Images/average return per level.png')
+#plt.show()
 
 
 

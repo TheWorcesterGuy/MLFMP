@@ -286,5 +286,3 @@ def check_update_validity():
 
 if __name__ == "__main__":
     main()
-
-

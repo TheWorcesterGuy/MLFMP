@@ -225,7 +225,7 @@ def close_trades(api, account_value, trade_value):
                 print('Max retries, sleeping until user intervention')
                 time.sleep(1000000)
                 
-    time.sleep(60)    
+    time.sleep(900)    
     account = api.get_account()
     cash = account.cash
     account_value = pd.read_csv('./data/account_value.csv')

@@ -168,19 +168,19 @@ class market :
             leaves = int(ml_parameters['num_leaves'].iloc[0])
             
         if self.mode == 3 :
-            depth = np.linspace(2,20,10)
+            depth = np.linspace(2,10,9)
             depth = int(random.choice(depth))
         else : 
             depth = int(ml_parameters['max_depth'].iloc[0])
             
         if self.mode == 4 :
-            rate = np.round(np.logspace(-3,0,num=20),4)
+            rate = np.round(np.logspace(-2.5,-0.5,num=20),4)
             rate = random.choice(rate)
         else : 
             rate = ml_parameters['learning_rate'].iloc[0]
             
         if self.mode == 5 :
-            bins = np.linspace(10,1000,20)
+            bins = np.linspace(100,900,20)
             bins = int(random.choice(bins))
         else : 
             bins = int(ml_parameters['bins'].iloc[0])
@@ -259,12 +259,19 @@ class market :
         ROC_live = np.array(record['ROC_live'].tolist())
         trade_accuracy_live = np.array(record['trade_accuracy_live'].tolist())
         model_performance_live = np.array(record['model_performance_live'].tolist())
+
+        today = datetime.today() - pd.Timedelta("2 days")
+        record = pd.read_csv('./data/record_model.csv').dropna()
+        record['date'] = pd.to_datetime(record['date'])
+        record = record.loc[(record['date'] > today)]
+        selected_models = np.round(100 * record['status'].sum()/record['status'].count(),2)
         
         report = pd.DataFrame({'date':[datetime.today().strftime('%Y - %m - %d')],
                             'accuracy_test' : [np.round(np.mean(accuracy_test),2)], 'ROC_test': [np.round(np.mean(ROC_test),2)], 
                             'trade_accuracy_test' : [np.round(np.mean(trade_accuracy_test),2)], 'model_performance_test' : [np.round(np.mean(model_performance_test),2)], 
                             'accuracy_live' : [np.round(np.mean(accuracy_live),2)], 'ROC_live': [np.round(np.mean(ROC_live),2)], 
-                            'trade_accuracy_live' : [np.round(np.mean(trade_accuracy_live),2)], 'model_performance_live' : [np.round(np.mean(model_performance_live),2)]})
+                            'trade_accuracy_live' : [np.round(np.mean(trade_accuracy_live),2)], 'model_performance_live' : [np.round(np.mean(model_performance_live),2)],
+                            'selected_models_%' : [selected_models]})
         
         report.to_csv('./data/model_report.csv', index = False)
         send_report()
