@@ -25,7 +25,7 @@ def main():
     print('\n Creating price & econometric features for %s ...' % sys.argv[1])
     features(symbol = sys.argv[1]).execute()
     print(' Done creating price features for %s' % sys.argv[1])
-    #features(symbol='AAPL').execute() # This line is reserved for testing
+    #features(symbol='QQQ').execute() # This line is reserved for testing
 
 
 class features:
@@ -50,7 +50,10 @@ class features:
                      #'JPM',  'BAC', 'PG']
 
         World_tickers = ['^FCHI','^STOXX50E','^AEX','000001.SS','^HSI','^N225','^BSESN','^SSMI','^IBEX']
-        Reinforce_tickers = ['^VVIX','^VIX','SPY', 'QQQ']
+        Reinforce_tickers = ['^VVIX','^VIX','SPY', 'QQQ','GC=F','CL=F','SI=F','EURUSD=X','JPY=X',
+                     'XLF','XLK','XLV','XLY', 'INTC', 'AMZN', 'FB', 'AAPL', 'DIS', 'TSLA', 'GOOG', 
+                     'GOOGL', 'MSFT', 'NFLX', 'NVDA', 'TWTR', 'AMD', 'WMT', 
+                     'JPM',  'BAC', 'PG']
         if self.symbol not in Reinforce_tickers:
             Reinforce_tickers.append(self.symbol)
         
@@ -73,7 +76,7 @@ class features:
             reinf.set_index('Date', inplace=True)
 
             rt_g = rt
-            if rt == self.symbol and self.symbol not in ['QQQ', 'SPY']:
+            if rt == self.symbol and self.symbol not in Reinforce_tickers:
                 rt_g = 'stock'
 
             for j in combinations:
@@ -86,7 +89,7 @@ class features:
                 price_data = price_data.drop(['Adj Close'], 1)
 
         # copy all the 'stock' features for QQQ and SPY (features order must be identical)
-        if self.symbol in ['QQQ', 'SPY']:
+        if self.symbol in Reinforce_tickers:
             for j in combinations:
                 price_data['stock - %s' % j] = price_data['%s - %s' % (self.symbol, j)]
             price_data['stock High 1'] = price_data['%s High 1' % self.symbol]
@@ -117,8 +120,6 @@ class features:
         
         self.price_data = price_data
 
-        print(price_data.tail(1))
-         
         return 
     
     def price_features(self):
