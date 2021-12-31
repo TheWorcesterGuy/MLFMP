@@ -112,7 +112,7 @@ class trade :
         today = price_data['Date'][price_data['stock']==self.predict].iloc[0] # Extract last date in features store, which sould correspond to todays date                     
         print('\nTodays features date is %s' %today.date())
         
-        if today.date() != (datetime.today()).date():
+        if today.date() >= (datetime.today()).date():
             self.flag_error = 1
             print(self.predict, 'is not up to date, it will be skipped \n')
         else :
@@ -175,14 +175,36 @@ class trade :
         df['Balanced_probability'] = trade_probability + 0.5
         df['Model_performance'] = Model_performance
         df['Prob_distance'] = Prob_distance
-        df['K%'] = df['Balanced_probability'] - (1-df['Balanced_probability'])/df['Model_performance']
-        df['K%'] = df['K%']/df['K%'].sum()
+        
+        if (not len(glob.glob('./data/record_traded.csv'))) or (len(list(set(pd.read_csv('./data/record_traded.csv')['Traded'])))<18):
+
+            df['K%'] = df['Balanced_probability'] - (1-df['Balanced_probability'])/df['Model_performance']
+            df['K%'] = df['K%']/df['K%'].sum()
+            df = df.round(4)
+            df['Side'][df['Side']<0] = -1
+            df['Side'][df['Side']>0] = 1
+            df['Side'][df['Side']==0] = np.nan
+            
+        else :
+            record = pd.read_csv('./data/record_all_predictions.csv')
+            record['rate'] = record['Prediction']*record['Outcome']
+            record['rate'][record['rate']<0] = 0
+            del record['Probability']
+            record = record.groupby(['Traded']).mean()
+            df = pd.merge(df, record, left_index=True, right_index=True)
+
+            df['K%'] = df['Balanced_probability'] - (1-df['Balanced_probability'])/df['rate']
+            df['K%'] = df['K%']/df['K%'].sum()
+            
         df = df.round(4)
         df['Side'][df['Side']<0] = -1
         df['Side'][df['Side']>0] = 1
         df['Side'][df['Side']==0] = np.nan
+        df['K%'][df['K%']>0.1] = 0.15
         df = df.dropna()
         df.to_csv('./data/to_trade.csv')
+            
+            
         return df
         
         
@@ -216,13 +238,13 @@ class trade :
             prob = np.array([])
             model_performance = np.array([])
             for i in range(len(probability)) :
-                if (probability[i] > 0.75) :
+                if (probability[i] > 0.8) :
                     side = np.append(side, 1)
                     prob_distance = np.append(prob_distance, probability[i] - level_p[i])
                     product = np.append(product, stock)
                     prob = np.append(prob, probability[i])
                     model_performance = np.append(model_performance, 0.01*performance[i]/(1-performance[i]*0.01))
-                if (probability[i] < 0.25) :
+                if (probability[i] < 0.2) :
                     side = np.append(side, -1)
                     prob_distance = np.append(prob_distance, (1-probability[i]) - level_n[i])
                     product = np.append(product, stock)

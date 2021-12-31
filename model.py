@@ -33,6 +33,7 @@ warnings.filterwarnings("ignore")
 
 def main():
     #os.system("python3 update_features_store.py")
+    #market().stock_matrix()
     os.system("python3 model_evaluate.py")
     nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
     date_sent = nyc_datetime - pd.Timedelta("1 days")
@@ -69,7 +70,7 @@ class market :
         self.price_data = pd.read_csv('./data/features_store.csv',',')
         self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.95))
         self.all = glob.glob(os.getcwd() + '/models/*.{}'.format('csv'))
-        self.mode = random.randint(1,10)
+        self.mode = random.randint(1,15)
         print('\nModel creation mode : %d\n' %self.mode)
        
     def stock_matrix(self) :
@@ -156,13 +157,13 @@ class market :
         ml_parameters = pd.read_csv('./data/parameters.csv')
         
         if self.mode == 1 :
-            self.shaps = np.round(np.logspace(-3.5,-1,num=20),4)
+            self.shaps = np.round(np.logspace(-3.5,-1,num=100),4)
             self.shaps = random.choice(self.shaps)
         else : 
             self.shaps = ml_parameters['shaps'].iloc[0]
         
         if self.mode == 2 :
-            leaves = np.linspace(10,400,20)
+            leaves = np.linspace(10,1000,100)
             leaves = int(random.choice(leaves))
         else : 
             leaves = int(ml_parameters['num_leaves'].iloc[0])
@@ -180,7 +181,7 @@ class market :
             rate = ml_parameters['learning_rate'].iloc[0]
             
         if self.mode == 5 :
-            bins = np.linspace(100,900,20)
+            bins = np.linspace(100,900,100)
             bins = int(random.choice(bins))
         else : 
             bins = int(ml_parameters['bins'].iloc[0])

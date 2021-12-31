@@ -33,15 +33,17 @@ def main():
     print('\n Evaluating recorded models \n')
 
     #evaluation().charts()
-    #evaluation().variable()
+    evaluation().variable()
     #evaluation().money()
     #evaluation().account()
-    evaluation().models_quality()
-    evaluation().results_traded()
-    evaluation().results_predicted()
+    #evaluation().models_quality()
+    #evaluation().models_quality_trade()
+    #evaluation().results_traded()
+    #evaluation().results_predicted()
     
 class evaluation :
     def __init__(self):
+        self.save = False
         record = pd.read_csv('./data/record_model.csv')
         record = record.drop_duplicates(subset=['model_name'], keep='last')
         record['date'] = pd.to_datetime(record['date'])
@@ -89,16 +91,20 @@ class evaluation :
         plt.ylabel('Mean live accuracy above threshold')
         plt.plot(accuracy_test, mean_live_thr, 'o')
         plt.yscale('log')
-        plt.savefig('./Images/Mean live accuracy over threshold.png')
-        #plt.show()
+        if self.save :
+            plt.savefig('./Images/Mean live accuracy over threshold.png')
+        else :
+            plt.show()
         
         plt.title('Mean live accuracy over ROC threshold')
         plt.xlabel('Test ROC threshold')
         plt.ylabel('Mean live accuracy above threshold')
         plt.plot(ROC_test, mean_live_ROC_thr, 'o')
         plt.yscale('log')
-        plt.savefig('./Images/Mean live accuracy over ROC threshold.png')
-        #plt.show()
+        if self.save :
+            plt.savefig('./Images/Mean live accuracy over ROC threshold.png')
+        else :    
+            plt.show()
         
         # plt.title('Standard deviation of performance over threshold')
         # plt.xlabel('Test accuracy threshold')
@@ -111,16 +117,20 @@ class evaluation :
         plt.ylabel('Live results over threshold')
         plt.plot(accuracy_test, mean_live_perf, 'o')
         plt.yscale('log')
-        plt.savefig('./Images/Trading results over threshold.png')
-        #plt.show()
+        if self.save :
+            plt.savefig('./Images/Trading results over threshold.png')
+        else :
+            plt.show()
         
         plt.title('Trading results over ROC threshold')
         plt.xlabel('Test ROC threshold')
         plt.ylabel('Live results over threshold')
         plt.plot(ROC_test, mean_live_ROC_perf, 'o')
         plt.yscale('log')
-        plt.savefig('./Images/Trading results over ROC threshold.png')
-        #plt.show()
+        if self.save :
+            plt.savefig('./Images/Trading results over ROC threshold.png')
+        else :
+            plt.show()
 
     def variable(self):    
         record = pd.read_csv('./data/record_model.csv').dropna()
@@ -206,7 +216,7 @@ class evaluation :
         plt.plot(np.array(df['accuracy_live']),np.array(df['model_performance_live']),'o')
         plt.xlabel('Live accuracy')
         plt.ylabel('Performance')
-        plt.show
+        plt.show()
         
         df = pd.read_csv('./data/record_model.csv')
         plt.figure()
@@ -214,7 +224,7 @@ class evaluation :
         plt.plot(np.array(df['ROC_live']),np.array(df['model_performance_live']),'o')
         plt.xlabel('Live ROC')
         plt.ylabel('Performance')
-        plt.show
+        plt.show()
         
         df = pd.read_csv('./data/record_model.csv')
         plt.figure()
@@ -222,7 +232,7 @@ class evaluation :
         plt.plot((np.array(df['ROC_live'])+np.array(df['accuracy_live']))/2,np.array(df['model_performance_live']),'o')
         plt.xlabel('metric')
         plt.ylabel('Performance')
-        plt.show
+        plt.show()
         
     def account (self) :
         account = pd.read_csv('./data/account.csv').dropna()
@@ -254,8 +264,36 @@ class evaluation :
         plt.xlabel('Date')
         plt.ylabel('Matric')
         plt.legend()
-        plt.savefig('./Images/models_quality.png')
-        #plt.show()
+        if self.save :
+            plt.savefig('./Images/models_quality.png')
+        else :
+            plt.show()
+            
+    def models_quality_trade(self):
+        record = pd.read_csv('./data/record_traded.csv').dropna()
+        record['status'] = record['Prediction']*record['Outcome']
+        record['status'][record['status']<0] = 0
+        record = record.groupby(['Date']).mean().reset_index()
+        record['date'] = pd.to_datetime(record['Date']) 
+        
+        plt.figure()
+        plt.plot(record['date'],record['status']*100,'g', label='Daily accurcay traded')
+        
+        record = pd.read_csv('./data/record_all_predictions.csv').dropna()
+        record['status'] = record['Prediction']*record['Outcome']
+        record['status'][record['status']<0] = 0
+        record = record.groupby(['Date']).mean().reset_index()
+        record['date'] = pd.to_datetime(record['Date']) 
+
+        plt.plot(record['date'],record['status']*100,'r', label='Daily accurcay all')
+        plt.xticks(rotation='vertical')
+        plt.xlabel('Date')
+        plt.ylabel('Metric')
+        plt.legend()
+        if self.save :
+            plt.savefig('./Images/trade_quality.png')
+        else :
+            plt.show()
 
     def results_traded(self) :
         record = pd.read_csv('./data/record_traded.csv')
@@ -300,8 +338,10 @@ class evaluation :
                                        display_labels=target_names)
         fig, ax = plt.subplots(figsize=(10,10))
         cmp.plot(ax=ax)
-        plt.savefig('./Images/results_traded.png')
-        #plt.show()
+        if self.save :
+            plt.savefig('./Images/results_traded.png')
+        else :
+            plt.show()
         
         plt.figure()
         probs = record['Probability'].dropna().tolist()
@@ -326,8 +366,10 @@ class evaluation :
         plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r', label='Chance', alpha=.8)
         plt.title("ROC traded")
         plt.legend()
-        plt.savefig('./Images/ROC traded.png')
-        #plt.show() 
+        if self.save :
+            plt.savefig('./Images/ROC traded.png')
+        else : 
+            plt.show() 
         
         plt.figure()
         deltas = record['Delta'].dropna()
@@ -338,8 +380,10 @@ class evaluation :
         plt.title("Probability to delta curve traded")
         plt.xlabel('Probability')
         plt.ylabel('Delta')
-        plt.savefig('./Images/Probability to delta curve traded.png')
-        #plt.show()
+        if self.save :
+            plt.savefig('./Images/Probability to delta curve traded.png')
+        else :
+            plt.show()
         
         probability = np.array(probability)
         plt.rcParams["figure.figsize"] = 10, 5
@@ -380,8 +424,10 @@ class evaluation :
         ax2.set_ylabel("Accuracy",color="red",fontsize=14)
         plt.title("Veracity Traded")
         plt.legend()
-        plt.savefig('./Images/Veracity Traded.png')
-        #plt.show()
+        if self.save :
+            plt.savefig('./Images/Veracity Traded.png')
+        else :
+            plt.show()
         
     def results_predicted(self) :
         record = pd.read_csv('./data/record_all_predictions.csv')
@@ -428,8 +474,10 @@ class evaluation :
                                        display_labels=target_names)
         fig, ax = plt.subplots(figsize=(10,10))
         cmp.plot(ax=ax)
-        plt.savefig('./Images/results_predicted.png')
-        #plt.show()
+        if self.save :
+            plt.savefig('./Images/results_predicted.png')
+        else :
+            plt.show()
         
         probs = record['Probability'].dropna().tolist()
         y_true = np.array([int(float(i)) for i in record['Outcome'].tolist()])
@@ -453,8 +501,10 @@ class evaluation :
         plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r', label='Chance', alpha=.8)
         plt.title("ROC all predictions")
         plt.legend()
-        plt.savefig('./Images/ROC all predictions.png')
-        #plt.show() 
+        if self.save :
+            plt.savefig('./Images/ROC all predictions.png')
+        else :
+            plt.show() 
         
         plt.figure()
         deltas = record['Delta'].dropna().tolist()
@@ -465,8 +515,10 @@ class evaluation :
         plt.title("Probability to delta curve all predictions")
         plt.xlabel('Probability')
         plt.ylabel('Delta')
-        plt.savefig('./Images/Probability to delta curve all predictions.png')
-        #plt.show()
+        if self.save :
+            plt.savefig('./Images/Probability to delta curve all predictions.png')
+        else :
+            plt.show()
         
         probability = np.array(probability)
         plt.rcParams["figure.figsize"] = 10, 5
@@ -507,8 +559,10 @@ class evaluation :
         ax2.set_ylabel("Accuracy",color="red",fontsize=14)
         plt.title("Veracity all predictions")
         plt.legend()
-        plt.savefig('./Images/Veracity all predictions.png')
-        #plt.show() 
+        if self.save :
+            plt.savefig('./Images/Veracity all predictions.png')
+        else :
+            plt.show() 
         
         
 if __name__ == "__main__":
