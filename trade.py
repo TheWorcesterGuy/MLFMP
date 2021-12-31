@@ -112,7 +112,7 @@ class trade :
         today = price_data['Date'][price_data['stock']==self.predict].iloc[0] # Extract last date in features store, which sould correspond to todays date                     
         print('\nTodays features date is %s' %today.date())
         
-        if today.date() >= (datetime.today()).date():
+        if today.date() < (datetime.today()).date():
             self.flag_error = 1
             print(self.predict, 'is not up to date, it will be skipped \n')
         else :
@@ -201,6 +201,7 @@ class trade :
         df['Side'][df['Side']>0] = 1
         df['Side'][df['Side']==0] = np.nan
         df['K%'][df['K%']>0.1] = 0.15
+        df['K%'][df['K%']<0.01] = np.nan
         df = df.dropna()
         df.to_csv('./data/to_trade.csv')
             
