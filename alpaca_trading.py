@@ -17,6 +17,7 @@ import pandas as pd
 import numpy as np
 import warnings
 from email_updates_error import *
+import yaml
 warnings.simplefilter(action = 'ignore')
 
 def main():
@@ -68,8 +69,14 @@ def login() :
         Available funds to trade
     """
     
-    APCA_API_KEY_ID = 'PKXJKIRLEZRBAK5GDIX4'
-    APCA_API_SECRET_KEY = 'Z2Q6Uv6N8qR424GVNCcGBze5mJPeEkOHDeImFLoX'
+    with open('credentials.yaml', 'r') as stream:
+        creds = yaml.safe_load(stream)
+
+        alpaca_key_id = creds['alpaca']['key_id']
+        alpaca_secret_key = creds['alpaca']['secret_key']
+    
+    APCA_API_KEY_ID = alpaca_key_id
+    APCA_API_SECRET_KEY = alpaca_secret_key
     APCA_API_BASE_URL = 'https://paper-api.alpaca.markets'
     APCA_API_DATA_URL = 'https://data.alpaca.markets'
     APCA_RETRY_MAX = 3	
