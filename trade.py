@@ -202,8 +202,9 @@ class trade :
         df['Side'][df['Side']==0] = np.nan
         df['K%'][df['K%']>0.1] = 0.15
         df['K%'][df['K%']<0.01] = np.nan
+        df = df.reset_index().rename({'index': 'Products'}, axis=1)
         df = df.dropna()
-        df.to_csv('./data/to_trade.csv')
+        df.to_csv('./data/to_trade.csv',index = False)
             
             
         return df
@@ -245,7 +246,7 @@ class trade :
                     product = np.append(product, stock)
                     prob = np.append(prob, probability[i])
                     model_performance = np.append(model_performance, 0.01*performance[i]/(1-performance[i]*0.01))
-                if (probability[i] < 0.2) :
+                if (probability[i] < 0.8) :
                     side = np.append(side, -1)
                     prob_distance = np.append(prob_distance, (1-probability[i]) - level_n[i])
                     product = np.append(product, stock)

@@ -100,14 +100,15 @@ def distribution(api, buying_power) :
     `df` : Pandas DataFrame
         Contains the final trading data, note this data is also exported to '.csv' for email updates
     """
-    
-    reduced_power = (buying_power/2)
-    print(reduced_power)
+    account = api.get_account()
+    reduced_power = (float(account.buying_power)/2)
+    print('The trading power today is: %a $' %reduced_power)
     df = pd.read_csv('./data/to_trade.csv')
     
     Last_Stock_Value = []
     Fractionable = []
-
+    Variability = []
+    
     for stock in df['Products'] :
         barset = api.get_barset(stock, 'day', limit=5)
         bars = barset[stock]
@@ -120,11 +121,14 @@ def distribution(api, buying_power) :
             frac = api.get_asset(stock).fractionable
         
         Fractionable.append(frac)
+        Variability.append(stock_variability(stock))
+        
          
     df['Fractionable'] = Fractionable
+    df['Variability'] = Variability
     df['Last_Stock_Value_$'] = Last_Stock_Value
     df = df.sort_values(by=['K%'], ascending=False)
-    df['Value_to_trade_$'] = df['K%']*reduced_power
+    df['Value_to_trade_$'] = (df['K%']*reduced_power)/df['Variability']
     df['Quantity'] = df['Value_to_trade_$']/df['Last_Stock_Value_$']
     
     df['Quantity'][df['Fractionable'] == False] = np.floor(df['Quantity'][df['Fractionable'] == False].tolist())
@@ -136,6 +140,17 @@ def distribution(api, buying_power) :
     df.to_csv('./data/days_trades.csv', index = False)
     
     return df, trade_value    
+
+def stock_variability(stock):
+    SPY = pd.read_csv('./data/TRADE_DATA/price_data/SPY.csv')
+    SPY = SPY.iloc[-100:]
+    SPY = ((SPY['Close']-SPY['Open'])/SPY['Open']).abs().mean()
+    
+    df = pd.DataFrame()
+    temp = pd.read_csv('./data/TRADE_DATA/price_data/' + stock + '.csv')
+    temp = temp.iloc[-100:]
+    temp = ((temp['Close']-temp['Open'])/temp['Open']).abs().mean()/SPY
+    return np.round(temp,2)
 
 def open_trade(api, trade_data) :
     """Function used to open trades based on the stock, trade type and quantity'
