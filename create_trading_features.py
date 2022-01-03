@@ -25,7 +25,7 @@ def main():
     print('\n Creating price & econometric features for %s ...' % sys.argv[1])
     features(symbol = sys.argv[1]).execute()
     print(' Done creating price features for %s' % sys.argv[1])
-    #features(symbol='QQQ').execute() # This line is reserved for testing
+    #features(symbol='AAPL').execute() # This line is reserved for testing
 
 
 class features:
@@ -50,10 +50,7 @@ class features:
                      #'JPM',  'BAC', 'PG']
 
         World_tickers = ['^FCHI','^STOXX50E','^AEX','000001.SS','^HSI','^N225','^BSESN','^SSMI','^IBEX']
-        Reinforce_tickers = ['^VVIX','^VIX','SPY', 'QQQ','GC=F','CL=F','SI=F','EURUSD=X','JPY=X',
-                     'XLF','XLK','XLV','XLY', 'INTC', 'AMZN', 'FB', 'AAPL', 'DIS', 'TSLA', 'GOOG', 
-                     'GOOGL', 'MSFT', 'NFLX', 'NVDA', 'TWTR', 'AMD', 'WMT', 
-                     'JPM',  'BAC', 'PG']
+        Reinforce_tickers = ['^VVIX','^VIX','SPY', 'QQQ']
         if self.symbol not in Reinforce_tickers:
             Reinforce_tickers.append(self.symbol)
         
@@ -94,20 +91,21 @@ class features:
                 price_data['stock - %s' % j] = price_data['%s - %s' % (self.symbol, j)]
             price_data['stock High 1'] = price_data['%s High 1' % self.symbol]
 
-
-        # normalize each delta price features using the variation over the last 150 days
+        # Standardization for each delta price features using the variation over the last 800 days
         to_normalize_columns = price_data.columns[price_data.columns.get_loc('symbol') + 1:]
         for col in to_normalize_columns:
 
             delta_cols = []
-            for k in range(1, 151):
-                price_data['delta_%s' % k] = np.abs(price_data[col].shift(k))
+            for k in range(1, 801):
+                price_data['delta_%s' % k] = price_data[col].shift(k)
                 delta_cols.append('delta_%s' % k)
-            delta_cols.append('delta_%s' % k)
-            price_data['mean_abs_delta'] = price_data[delta_cols].mean(axis=1)
-            price_data[col] = price_data[col] / price_data['mean_abs_delta']
-            price_data = price_data.drop(delta_cols + ['mean_abs_delta'], axis=1)
+            price_data['std_delta'] = price_data[delta_cols].std(axis=1)
+            price_data[col] = price_data[col] / price_data['std_delta']
+            price_data = price_data.drop(delta_cols + ['std_delta'], axis=1)
         
+        # Drop first 800 days of price data (can't be standardized fully)
+        price_data = price_data.iloc[800:]
+
         price_data['change_in_price'] = (price_data['Close'] - price_data['Open'])
         
         price_data = price_data.reset_index(drop=False)
@@ -119,6 +117,7 @@ class features:
         price_data.set_index('Date', inplace=True)
         
         self.price_data = price_data
+
 
         return 
     

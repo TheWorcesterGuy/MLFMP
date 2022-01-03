@@ -37,7 +37,7 @@ def main():
             df = df.sort_values('Date')
             start_date = df['Date'].iloc[-2]  # to make sure we don't have any hole
         else:
-            start_date = datetime(2014, 1, 1)
+            start_date = datetime(2012, 1, 1)
         
         price_data = get_price(ticker, start_date)
         
