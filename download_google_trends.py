@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from pytrends import dailydata
-from datetime import datetime
+from datetime import datetime, timedelta
 from pytrends.request import TrendReq
 import pytrends
 from pathlib import Path
@@ -15,6 +15,7 @@ import glob
 import pytz
 import csv
 from pathlib import Path
+from pytz import timezone
 
 
 def main():
@@ -23,11 +24,12 @@ def main():
     n_days = 14
 
     # Check if Google Trend update is allowed
-    check_update_validity()
+    #check_update_validity()
 
     google_trends = ['INTC', 'TSLA', 'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
         	  'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG', 'VIX', 'debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'stock risk',
                      'investing.com']
+    #google_trends = ['PG']
 
 
     if os.path.isfile('./data/temp_data.csv'):
@@ -50,6 +52,16 @@ def main():
             files = [file for file in files if 'encoded' not in file]
 
             if len(files) > 0:
+
+                # first, remove the last 100 GT as we want them to be replaced by the older ones (recent GT are still unstable)
+                list_updt = [pd.read_csv(file) for file in glob.glob("./data/GOOGLE_TRENDS/%s/*.csv" % google_trend)]
+                df_updt = pd.concat(list_updt, axis=0)
+                df_updt['date'] = pd.to_datetime(df_updt['date'], errors='coerce')
+                df_updt = df_updt.sort_values('date', ascending=True)
+                df_updt = df_updt.iloc[0:-100]
+                repartition_files(df_updt, google_trend, default_dir)
+
+                # find the latest datetime and resume downloading
                 list_gt = [pd.read_csv(file, lineterminator='\n') for file in
                            glob.glob("./data/GOOGLE_TRENDS/%s/*.csv" % google_trend_str)]
                 df = pd.concat(list_gt, axis=0)
@@ -85,7 +97,7 @@ def main():
                 df = pd.read_csv('data/temp_data.csv')
                 df['isPartial'] = df['isPartial'].astype(str)
 
-                last_file_saved = (df[df['isPartial'] == 'True'].shape[0] > 0) or (datetime.now(pytz.timezone('US/Eastern')) <= pd.to_datetime(df['date'].max()))
+                last_file_saved = datetime.now(pytz.timezone('US/Eastern')) - timedelta(hours=1) <= pd.to_datetime(df['date'].max())
 
                 if last_file is True and last_file_saved is False:
                     nb_try = nb_try + 1
@@ -99,8 +111,7 @@ def main():
                 df = df[df['date'] < datetime.now(pytz.timezone('US/Eastern')) - pd.Timedelta(hours=1)]
 
                 print('Last row downloaded : ', df) #.tail(1))
-                df = df.iloc[:-13] # last 13 hours are not reliable
-                print(df)
+
                 df.to_csv(filename, index=False)
                 start_date = df['date'].max()
 
@@ -108,42 +119,14 @@ def main():
                 time.sleep(waiting_time)
 
             # repartition by month the updated files
-            list_updt = [pd.read_csv(file) for file in
-                       glob.glob("./data/GOOGLE_TRENDS/%s/*.csv" % google_trend_str)]
+            list_updt = [pd.read_csv(file) for file in glob.glob("./data/GOOGLE_TRENDS/%s/*.csv" % google_trend)]
             df_updt = pd.concat(list_updt, axis=0)
-
-            df_updt['fixed_date'] = df_updt['date'].astype(str)
-            df_updt['fixed_date'] = df_updt['date'].str[:10]
-            df_updt['fixed_date'] = pd.to_datetime(df_updt['fixed_date'], errors='coerce')
-
-            df_updt['year'] = df_updt['fixed_date'].apply(lambda x: x.isocalendar()[0])
-            df_updt['month'] = df_updt['fixed_date'].dt.month
-
-            years = df_updt['year'].unique()
-            months = df_updt['month'].unique()
-
-            os.chdir('data/GOOGLE_TRENDS/%s/' % google_trend_str)
-            os.system("rm *.csv")
-            os.chdir(default_dir)
-
-            for year in years:
-                df_year = df_updt[df_updt['year'] == year]
-                for month in months:
-                    df_year_month = df_year[df_year['month'] == month]
-                    if df_year_month.empty is False:
-                        # if two duplicates for same date, we keep the one with larger value
-                        df_year_month = df_year_month.sort_values(by=df_year_month.columns[:2].tolist(), ascending=True)
-                        df_year_month = df_year_month.drop_duplicates(subset=['date'], keep='last')
-                        # save file
-                        df_year_month = df_year_month.drop(['fixed_date', 'year', 'month'], axis=1)
-                        df_year_month.to_csv('data/GOOGLE_TRENDS/%s/Google_Trends_%s_%s.csv' % (google_trend_str, year, month),
-                                            index=False)
-
-            #print('Done downloading Google Trends for %s.\n\n' % google_trend)
+            repartition_files(df_updt, google_trend, default_dir)
+            
+            print('Done downloading Google Trends for %s.\n\n' % google_trend)
             print('\n\n')
+ 
 
-
-        
         # For single keywords
         else:
         
@@ -156,14 +139,26 @@ def main():
             files = [file for file in files if 'encoded' not in file]
 
             if len(files) > 0:
+
+                # first, remove the last 100 GT as we want them to be replaced by the older ones (recent GT are still unstable)
+                list_updt = [pd.read_csv(file) for file in glob.glob("./data/GOOGLE_TRENDS/%s/*.csv" % google_trend)]
+                df_updt = pd.concat(list_updt, axis=0)
+                df_updt['date'] = pd.to_datetime(df_updt['date'], errors='coerce')
+                df_updt = df_updt.sort_values('date', ascending=True)
+                df_updt = df_updt.iloc[0:-100]
+                repartition_files(df_updt, google_trend, default_dir)
+
+                # find the latest datetime and resume downloading
                 list_gt = [pd.read_csv(file, lineterminator='\n') for file in
                            glob.glob("./data/GOOGLE_TRENDS/%s/*.csv" % google_trend)]
                 df = pd.concat(list_gt, axis=0)
                 df['date'] = pd.to_datetime(df['date'], errors='coerce')
                 start_date = df['date'].max()
+            
             else:
                 eastern = pytz.timezone('US/Eastern')
                 start_date = pd.to_datetime('2016-01-01', format='%Y-%m-%d').tz_localize(pytz.utc).tz_convert(eastern)
+    
 
             final_date = datetime.now(pytz.timezone('US/Eastern'))
             nb_try = 0
@@ -183,13 +178,14 @@ def main():
                     last_file = False
 
                 while os.path.isfile('data/temp_data.csv') is False:
-
-                    os.system("python query_google.py %s %s %s %s %s %s %s" % (start_date.year, start_date.month, start_date.day,
-                                                                                   next_date.year, next_date.month, next_date.day, str(google_trend)))
+                    print(start_date, next_date)
+                    os.system("python query_google.py %s %s %s %s %s %s %s %s" % (start_date.year, start_date.month, start_date.day,
+                                                                                   next_date.year, next_date.month, next_date.day, next_date.hour, str(google_trend)))
                 df = pd.read_csv('data/temp_data.csv')
                 df['isPartial'] = df['isPartial'].astype(str)
-
-                last_file_saved = (df[df['isPartial'] == 'True'].shape[0] > 0) or (datetime.now(pytz.timezone('US/Eastern')) <= pd.to_datetime(df['date'].max()))
+                
+                # check if last download                
+                last_file_saved = datetime.now(pytz.timezone('US/Eastern')) - timedelta(hours=1) <= pd.to_datetime(df['date'].max())
 
                 if last_file is True and last_file_saved is False:
                     nb_try = nb_try + 1
@@ -203,8 +199,6 @@ def main():
                 df = df[df['date'] < datetime.now(pytz.timezone('US/Eastern')) - pd.Timedelta(hours=1)]
 
                 print('Last row downloaded : ', df) #.tail(1))
-                df = df.iloc[:-13] # last 13 hours are not reliable
-                print(df)
                 
                 df.to_csv(filename, index=False)
                 start_date = df['date'].max()
@@ -213,38 +207,11 @@ def main():
                 time.sleep(waiting_time)
 
             # repartition by month the updated files
-            list_updt = [pd.read_csv(file) for file in
-                       glob.glob("./data/GOOGLE_TRENDS/%s/*.csv" % google_trend)]
+            list_updt = [pd.read_csv(file) for file in glob.glob("./data/GOOGLE_TRENDS/%s/*.csv" % google_trend)]
             df_updt = pd.concat(list_updt, axis=0)
+            repartition_files(df_updt, google_trend, default_dir)
 
-            df_updt['fixed_date'] = df_updt['date'].astype(str)
-            df_updt['fixed_date'] = df_updt['date'].str[:10]
-            df_updt['fixed_date'] = pd.to_datetime(df_updt['fixed_date'], errors='coerce')
-
-            df_updt['year'] = df_updt['fixed_date'].apply(lambda x: x.isocalendar()[0])
-            df_updt['month'] = df_updt['fixed_date'].dt.month
-
-            years = df_updt['year'].unique()
-            months = df_updt['month'].unique()
-
-            os.chdir('data/GOOGLE_TRENDS/%s/' % google_trend)
-            os.system("rm *.csv")
-            os.chdir(default_dir)
-
-            for year in years:
-                df_year = df_updt[df_updt['year'] == year]
-                for month in months:
-                    df_year_month = df_year[df_year['month'] == month]
-                    if df_year_month.empty is False:
-                        # if two duplicates for same date, we keep the one with larger value
-                        df_year_month = df_year_month.sort_values(by=['date', google_trend], ascending=True)
-                        df_year_month = df_year_month.drop_duplicates(subset=['date'], keep='last')
-                        # save file
-                        df_year_month = df_year_month[['date', google_trend, 'isPartial']]
-                        df_year_month.to_csv('data/GOOGLE_TRENDS/%s/Google_Trends_%s_%s.csv' % (google_trend, year, month),
-                                            index=False)
-
-            #print('Done downloading Google Trends for %s.\n\n' % google_trend)
+            print('Done downloading Google Trends for %s.\n\n' % google_trend)
             print('\n\n')
 
     with open('data/history_google_updates.csv', 'a') as fd:
@@ -283,6 +250,33 @@ def check_update_validity():
         exit(0)
         #os.system('python fill_google_trend_holes.py')
 
+def repartition_files(df_updt, google_trend, default_dir):
+
+    df_updt['fixed_date'] = df_updt['date'].astype(str)
+    df_updt['fixed_date'] = df_updt['fixed_date'].str[:10]
+    df_updt['fixed_date'] = pd.to_datetime(df_updt['fixed_date'], errors='coerce')
+    df_updt['year'] = df_updt['fixed_date'].dt.year
+    df_updt['month'] = df_updt['fixed_date'].dt.month
+
+    years = df_updt['year'].unique()
+    months = df_updt['month'].unique()
+
+    os.chdir('data/GOOGLE_TRENDS/%s/' % google_trend)
+    os.system("rm *.csv")
+    os.chdir(default_dir)
+
+    for year in years:
+        df_year = df_updt[df_updt['year'] == year]
+        for month in months:
+            df_year_month = df_year[df_year['month'] == month]
+            if df_year_month.empty is False:
+                # if two duplicates for same date, we keep the one with larger value (avoid adding zeros)
+                df_year_month = df_year_month.sort_values(by=['date', google_trend], ascending=True)
+                df_year_month = df_year_month.drop_duplicates(subset=['date'], keep='last')
+                # save file
+                df_year_month = df_year_month[['date', google_trend, 'isPartial']]
+                df_year_month.to_csv('data/GOOGLE_TRENDS/%s/Google_Trends_%s_%s.csv' % (google_trend, year, month),
+                                                index=False)
 
 if __name__ == "__main__":
     main()

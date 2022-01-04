@@ -21,9 +21,8 @@ day_start = int(args[2])
 year_end = int(args[3])
 month_end = int(args[4])
 day_end = int(args[5])
-
-
-keywords = args[6:]
+hour_end = int(args[6]) 
+keywords = args[7:]
 
 # for couple Bullish / Bearish (if so, there will be brackets as it's a list in input)
 if '[' in keywords[0]:
@@ -46,19 +45,17 @@ else:
 
 
 time_ref = pd.date_range("%s-%s-%s 00:00:00" % (year_start, month_start, day_start),
-                         "%s-%s-%s 00:00:00" % (year_end, month_end, day_end), freq="1H") \
+                         "%s-%s-%s %s:00:00" % (year_end, month_end, day_end, hour_end), freq="1H") \
                                 .to_frame(name='date').reset_index(drop=True)
 
 pytrends = TrendReq(hl='en-US', geo='', tz=360, retries=5, timeout=(30, 45))
-
 df = pytrends.get_historical_interest(keyword_query, year_start=year_start, month_start=month_start,
                                       day_start=day_start,
                                       hour_start=0, year_end=year_end, month_end=month_end,
-                                      day_end=day_end,
-                                      hour_end=0, cat=search_cat, geo='', gprop='')
+                                      day_end=day_end, hour_end=hour_end, cat=search_cat, geo='', gprop='')
+                                      
 if df.empty:
     df = pd.DataFrame(columns=['date'] + keyword_query + ['isPartial'])
-
 df = df.merge(time_ref, on='date', how='right')[['date'] + keyword_query + ['isPartial']]
 
 df[keyword_query] = df[keyword_query].fillna(0)
@@ -67,7 +64,6 @@ df['isPartial'] = df['isPartial'].fillna('False')
 df['isPartial'] = df['isPartial'].astype(str)
 df.loc[((df['isPartial'] == 'True') & (df[keyword_query].sum(axis=1) == 0)) | ((df['isPartial'] == 'True') & (df.index != df.index.max())), 'isPartial'] = 'Suspect'
 end_date = df.index[(df['isPartial'] == 'True')].tolist()
-
 if len(end_date) > 0:
     df = df.iloc[:end_date[0] + 1]
 
@@ -86,6 +82,7 @@ print('Number of missing values : %s (%s%%)' % (nb_missing_values, percent_missi
 
 # drop duplicates as sometime duplicates on last row (google bug)
 df = df.drop_duplicates('date')
+
 
 df.to_csv('data/temp_data.csv', index=False)
 

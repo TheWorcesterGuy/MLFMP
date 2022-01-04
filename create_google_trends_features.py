@@ -40,30 +40,20 @@ else:
 df['date'] = df['date'].apply(lambda x: x.replace(tzinfo=None))
 df['date'] = pd.to_datetime(df['date'])
 
-# In prod, the last 13 hours can't be used (not reliable). The last hour used at 8h30 NY time is therefore the Google Trend of 7pm of previous day.
-# 9pm of previous day must become mightnight (end of day) of next day
+# In prod, the last 14 hours can't be used yet (unstable). 5pm previous day must be come 11pm of current day
+# (14 hours between 5pm previous and 7am current day)
+# we must add 30 hours to datetime to make 11pm of previous day the midnight of next day
+# but it doesn't mean we drop the last 30 hours of live GT! with time zones, it means we drop the last 14 hours only.
 df['date'] = df['date'] + pd.DateOffset(hours=30)
 
 
-
-
-# remove holidays and weekends
-df = df[df.date.dt.dayofweek < 5]
-
-final_date = datetime.today()
-holidays = calendar().holidays(start='2000-01-01', end='%s-%s-%s' %(final_date.year, final_date.month, final_date.day))
-m = df['date'].isin(holidays)
-df = df[~m].copy()
-
-
-# Create a time series with all timestamp expect weekends & holidays (used to detected missing records in Google trends)
-time = pd.DataFrame(pd.date_range(df['date'].min(), df['date'].max(), freq='H').values,
-                    columns=['date'])
-m = time['date'].isin(holidays)
-time = time[~m].copy().sort_values('date', ascending=False)
-time = time[time.date.dt.dayofweek < 5]
-
-df = df.merge(time['date'], on='date', how='outer').sort_values('date', ascending=False)
+# # Create a time series with all timestamp expect weekends & holidays (used to detected missing records in Google trends)
+# time = pd.DataFrame(pd.date_range(df['date'].min(), df['date'].max(), freq='H').values,
+#                     columns=['date'])
+# m = time['date'].isin(holidays)
+# time = time[~m].copy().sort_values('date', ascending=False)
+# time = time[time.date.dt.dayofweek < 5]
+# df = df.merge(time['date'], on='date', how='outer').sort_values('date', ascending=False)
 
 
 # Replace missing values and zeros values by nans
@@ -81,6 +71,29 @@ df.loc[df[df.columns[1:].tolist()].sum(axis=1) == 0, df.columns[1:].tolist()] = 
 df_d = df.copy()
 df_d['date'] = df_d['date'].dt.date
 df_d = df_d.groupby('date', as_index=False).mean()
+
+
+# The GT on Monday must be the one obtained for previous saturday because GT on weekends are irrelevant
+def correct_monday_value_daily(row):
+   if row['day_of_week'] == 'Monday':
+      return row['shift saturday']
+   else:
+      return row[google_trend]
+
+df_d['date'] = pd.to_datetime(df_d['date'])
+df_d['day_of_week'] = df_d['date'].dt.day_name()
+df_d['shift saturday'] = df_d[google_trend].shift(2)
+df_d[google_trend] = df_d.apply(lambda row: correct_monday_value_daily(row), axis=1)
+df_d = df_d.drop(['shift saturday', 'day_of_week'], axis=1)
+
+
+# remove holidays and weekends
+df_d = df_d[df_d.date.dt.dayofweek < 5]
+
+final_date = datetime.today()
+holidays = calendar().holidays(start='2000-01-01', end='%s-%s-%s' %(final_date.year, final_date.month, final_date.day))
+m = df_d['date'].isin(holidays)
+df_d = df_d[~m].copy()
 
 
 # Rename stock names with generic name 'stock'
@@ -107,6 +120,7 @@ if google_trend == 'bullish_bearish':
 # for single keywords:
 else:
     for col in df_d.columns[1:]:
+
         df_d['GT_%s_delta1' % col] = (df_d[col] - df_d[col].shift(1)) / (df_d[col].shift(1) + 1)
         df_d['GT_%s_delta2' % col] = (df_d[col] - df_d[col].shift(2)) / (df_d[col].shift(2) + 1)
         df_d['GT_%s_delta3' % col] = (df_d[col] - df_d[col].shift(3)) / (df_d[col].shift(3) + 1)
@@ -119,27 +133,53 @@ else:
 
 
 
-
 # HOURLY AGGREGATION (only for stock keywords)
 
 if google_trend in ['INTC', 'TSLA',  'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
               'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG']:
 
-	# compute delta between GT of opening (9 am) and GT of closing (4pm)
-	df_h_peaks = df.copy()
-	df_h_peaks['hour'] = df_h_peaks['date'].dt.hour
-	df_h_peaks = df_h_peaks[df_h_peaks['hour'].isin([15, 22])]   # matches for google trends of 9am, 16pm of previous day
-	df_h_peaks['date'] = df_h_peaks['date'].dt.date
-	df_h_peaks['hour'] = df_h_peaks['hour'].astype(str)
-	df_h_peaks = pd.pivot_table(df_h_peaks, values=google_trend, index='date', columns='hour')
-	df_h_peaks.columns = list(map("".join, df_h_peaks.columns))
-	df_h_peaks['delta_GT_peaks'] = (1 - (df_h_peaks['15'] / df_h_peaks['22'])) * 100
-	df_h_peaks['delta_GT_peaks'] = df_h_peaks['delta_GT_peaks'].fillna(-999)
-	df_h_peaks = df_h_peaks.drop(['15', '22'], axis=1)
+    # compute delta between GT of opening (10 am) and GT of closing (4pm)
+    df_h_peaks = df.copy()
+    df_h_peaks['hour'] = df_h_peaks['date'].dt.hour
+    df_h_peaks = df_h_peaks[df_h_peaks['hour'].isin([16, 21])]   # matches for google trends of 10am, 4pm of previous day
+    df_h_peaks['date'] = df_h_peaks['date'].dt.date
+    df_h_peaks['hour'] = df_h_peaks['hour'].astype(str)
+    df_h_peaks = pd.pivot_table(df_h_peaks, values=google_trend, index='date', columns='hour')
+    df_h_peaks.columns = list(map("".join, df_h_peaks.columns))
+    df_h_peaks['delta_GT_peaks'] = (1 - (df_h_peaks['16'] / df_h_peaks['21'])) * 100
+    df_h_peaks['delta_GT_peaks'] = df_h_peaks['delta_GT_peaks'].fillna(-999)
+    df_h_peaks = df_h_peaks.drop(['16', '21'], axis=1)
+    df_h_peaks = df_h_peaks.reset_index(drop=False)
+
+    # The GT on Monday must be the one obtained for previous saturday because GT on weekends are irrelevant
+    def correct_monday_value_hourly(row):
+        if row['day_of_week'] == 'Monday':
+            return row['shift saturday']
+        else:
+            return row['delta_GT_peaks']
+
+    df_h_peaks['date'] = pd.to_datetime(df_h_peaks['date'])
+    df_h_peaks['day_of_week'] = df_h_peaks['date'].dt.day_name()
+    df_h_peaks['shift saturday'] = df_h_peaks['delta_GT_peaks'].shift(2)
+    df_h_peaks['delta_GT_peaks'] = df_h_peaks.apply(lambda row: correct_monday_value_hourly(row), axis=1)
+    df_h_peaks = df_h_peaks.drop(['shift saturday', 'day_of_week'], axis=1)
+
+    # remove holidays and weekends
+    df_h_peaks = df_h_peaks[df_h_peaks.date.dt.dayofweek < 5]
+
+    final_date = datetime.today()
+    holidays = calendar().holidays(start='2000-01-01', end='%s-%s-%s' %(final_date.year, final_date.month, final_date.day))
+    m = df_h_peaks['date'].isin(holidays)
+    df_h_peaks = df_h_peaks[~m].copy()
+
+    # create deltas
+    df_h_peaks['delta_GT_peaks_lag1'] = df_h_peaks['delta_GT_peaks'].shift(1) / (1 + df_h_peaks['delta_GT_peaks'])
+    df_h_peaks['delta_GT_peaks_lag2'] = df_h_peaks['delta_GT_peaks'].shift(2) / (1 + df_h_peaks['delta_GT_peaks'])
+    df_h_peaks['delta_GT_peaks_lag3'] = df_h_peaks['delta_GT_peaks'].shift(3) / (1 + df_h_peaks['delta_GT_peaks'])
 
 	
 	# join hourly features on daily features 
-	df = df_h_peaks.merge(df_d, on='date', how='inner')
+    df = df_h_peaks.merge(df_d, on='date', how='inner')
 
 
 # if mood google trend, only daily aggregation
