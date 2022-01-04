@@ -73,7 +73,7 @@ class features:
             reinf.set_index('Date', inplace=True)
 
             rt_g = rt
-            if rt == self.symbol and self.symbol not in Reinforce_tickers:
+            if rt == self.symbol and self.symbol not in ['SPY', 'QQQ']:
                 rt_g = 'stock'
 
             for j in combinations:
@@ -86,7 +86,7 @@ class features:
                 price_data = price_data.drop(['Adj Close'], 1)
 
         # copy all the 'stock' features for QQQ and SPY (features order must be identical)
-        if self.symbol in Reinforce_tickers:
+        if self.symbol in ['SPY', 'QQQ']:
             for j in combinations:
                 price_data['stock - %s' % j] = price_data['%s - %s' % (self.symbol, j)]
             price_data['stock High 1'] = price_data['%s High 1' % self.symbol]
