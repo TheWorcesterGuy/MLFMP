@@ -246,7 +246,7 @@ class trade :
                     product = np.append(product, stock)
                     prob = np.append(prob, probability[i])
                     model_performance = np.append(model_performance, 0.01*performance[i]/(1-performance[i]*0.01))
-                if (probability[i] < 0.8) :
+                if (probability[i] > 0.8) :
                     side = np.append(side, -1)
                     prob_distance = np.append(prob_distance, (1-probability[i]) - level_n[i])
                     product = np.append(product, stock)
@@ -334,74 +334,78 @@ class trade :
             account.to_csv('./data/account.csv', index = False) 
             
         today = datetime.today()
-        record_traded = pd.read_csv('./data/record_traded.csv')
-        traded = pd.read_csv('./data/to_trade.csv')
-        stocks = list(set(traded['Products'].tolist()))
-
-        for stock in stocks :
-            st = traded['Products'][traded['Products'] == stock].tolist()
-            pred = traded['Side'][traded['Products'] == stock].tolist()
-            prob = traded['Probability'][traded['Products'] == stock].tolist()
-            prob_dist = traded['Prob_distance'][traded['Products'] == stock].tolist()
-            
-            start_date = datetime.today().date() - pd.Timedelta('5 days')
-            end_date = datetime.today().date() + pd.Timedelta('1 days')
-            st_data = yf.download(stock, start = start_date, end = end_date, progress=False)
-            
-            delta = (st_data['Close'] - st_data['Open'])/st_data['Open']
-            delta = delta.iloc[-1]
-            
-            deltas = []
-            outcomes = []
-            
-            for i in range(len(st)):
-                deltas.append(delta)
-                outcomes.append(np.sign(delta))
-            
-            df = pd.DataFrame({'Date' : today.strftime('%Y - %m - %d'), 
-                        'Traded': st, 'Prediction': pred,
-                        'Outcome': outcomes, 'Delta': deltas, 'Probability': prob, 
-                        'Prob_distance': prob_dist})   
-            record_traded = record_traded.append(df, ignore_index=True)
-        record_traded.to_csv('./data/record_traded.csv', index = False)
         
-        record_all = pd.read_csv('./data/record_all_predictions.csv')
-        traded = pd.read_csv('./data/trade_data.csv')
-        traded['Side'] = traded['Probabilities']
-        traded['Side'].loc[traded['Side'] > 0.5] = 1
-        traded['Side'].loc[traded['Side'] < 0.5] = -1
-        stocks = list(set(traded['Products'].tolist()))
-
-        for stock in stocks :
-            st = traded['Products'][traded['Products'] == stock].tolist()
-            pred = traded['Side'][traded['Products'] == stock].tolist()
-            prob = traded['Probabilities'][traded['Products'] == stock].tolist()
-            
-            start_date = datetime.today().date() - pd.Timedelta('5 days')
-            end_date = datetime.today().date() + pd.Timedelta('1 days')
-            st_data = yf.download(stock, start = start_date, end = end_date, progress=False)
-            
-            delta = (st_data['Close'] - st_data['Open'])/st_data['Open']
-            delta = delta.iloc[-1]
-            
-            deltas = []
-            outcomes = []
-            
-            for i in range(len(st)):
-                deltas.append(delta)
-                outcomes.append(np.sign(delta))
-            
-            df = pd.DataFrame({'Date' : today.strftime('%Y - %m - %d'), 
-                        'Traded': st, 'Prediction': pred,
-                        'Outcome': outcomes, 'Delta': deltas, 'Probability': prob}) 
-            
-            record_all = record_all.append(df, ignore_index=True)
-        record_all.to_csv('./data/record_all_predictions.csv', index = False)        
+        if np.size(pd.read_csv('./data/to_trade.csv'))>0 :
+            record_traded = pd.read_csv('./data/record_traded.csv')
+            traded = pd.read_csv('./data/to_trade.csv')
+            stocks = list(set(traded['Products'].tolist()))
+    
+            for stock in stocks :
+                st = traded['Products'][traded['Products'] == stock].tolist()
+                pred = traded['Side'][traded['Products'] == stock].tolist()
+                prob = traded['Probability'][traded['Products'] == stock].tolist()
+                prob_dist = traded['Prob_distance'][traded['Products'] == stock].tolist()
+                
+                start_date = datetime.today().date() - pd.Timedelta('5 days')
+                end_date = datetime.today().date() + pd.Timedelta('1 days')
+                st_data = yf.download(stock, start = start_date, end = end_date, progress=False)
+                
+                delta = (st_data['Close'] - st_data['Open'])/st_data['Open']
+                delta = delta.iloc[-1]
+                
+                deltas = []
+                outcomes = []
+                
+                for i in range(len(st)):
+                    deltas.append(delta)
+                    outcomes.append(np.sign(delta))
+                
+                df = pd.DataFrame({'Date' : today.strftime('%Y - %m - %d'), 
+                            'Traded': st, 'Prediction': pred,
+                            'Outcome': outcomes, 'Delta': deltas, 'Probability': prob, 
+                            'Prob_distance': prob_dist})   
+                record_traded = record_traded.append(df, ignore_index=True)
+            record_traded.to_csv('./data/record_traded.csv', index = False)
         
-        account = pd.read_csv('./data/account.csv')
-        account_value = pd.read_csv('./data/account_value.csv')
-        account = account.append(account_value, ignore_index=True)
-        account.to_csv('./data/account.csv', index = False)  
+        if np.size(pd.read_csv('./data/trade_data.csv'))>0 :
+            record_all = pd.read_csv('./data/record_all_predictions.csv')
+            traded = pd.read_csv('./data/trade_data.csv')
+            traded['Side'] = traded['Probabilities']
+            traded['Side'].loc[traded['Side'] > 0.5] = 1
+            traded['Side'].loc[traded['Side'] < 0.5] = -1
+            stocks = list(set(traded['Products'].tolist()))
+    
+            for stock in stocks :
+                st = traded['Products'][traded['Products'] == stock].tolist()
+                pred = traded['Side'][traded['Products'] == stock].tolist()
+                prob = traded['Probabilities'][traded['Products'] == stock].tolist()
+                
+                start_date = datetime.today().date() - pd.Timedelta('5 days')
+                end_date = datetime.today().date() + pd.Timedelta('1 days')
+                st_data = yf.download(stock, start = start_date, end = end_date, progress=False)
+                
+                delta = (st_data['Close'] - st_data['Open'])/st_data['Open']
+                delta = delta.iloc[-1]
+                
+                deltas = []
+                outcomes = []
+                
+                for i in range(len(st)):
+                    deltas.append(delta)
+                    outcomes.append(np.sign(delta))
+                
+                df = pd.DataFrame({'Date' : today.strftime('%Y - %m - %d'), 
+                            'Traded': st, 'Prediction': pred,
+                            'Outcome': outcomes, 'Delta': deltas, 'Probability': prob}) 
+                
+                record_all = record_all.append(df, ignore_index=True)
+            record_all.to_csv('./data/record_all_predictions.csv', index = False)        
+        
+        if np.size(pd.read_csv('./data/to_trade.csv'))>0 :
+            account = pd.read_csv('./data/account.csv')
+            account_value = pd.read_csv('./data/account_value.csv')
+            account = account.append(account_value, ignore_index=True)
+            account.to_csv('./data/account.csv', index = False)  
         
         print(account.tail(1))
         return
@@ -447,12 +451,19 @@ class trade :
                 difference = close - nyc_datetime
                 print('\nWaiting for market close', round((difference.seconds/60)/60,2), 'hours\n')
                 time.sleep(difference.seconds+60)
-            
-            self.record()
-            os.system('python email_updates_evening.py')
         
         else : 
             print('\nEmpty trade sheet - No models or none up to date\n')
+            
+        nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+        close = nyc_datetime.replace(hour=16, minute=0, second=0,microsecond=0)
+        if nyc_datetime < close:
+            difference = close - nyc_datetime
+            print('\nWaiting for market close', round((difference.seconds/60)/60,2), 'hours\n')
+            time.sleep(difference.seconds+60)
+         
+        self.record()
+        os.system('python email_updates_evening.py')
 
         return 
     

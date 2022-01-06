@@ -32,11 +32,11 @@ warnings.simplefilter(action = 'ignore')
 def main():
     print('\n Evaluating recorded models \n')
 
-    #evaluation().charts()
-    evaluation().variable()
+    evaluation().charts()
+    #evaluation().variable()
     #evaluation().money()
     #evaluation().account()
-    #evaluation().models_quality()
+    evaluation().models_quality()
     #evaluation().models_quality_trade()
     #evaluation().results_traded()
     #evaluation().results_predicted()
@@ -248,11 +248,7 @@ class evaluation :
         
     def models_quality(self):
         record = pd.read_csv('./data/record_model.csv').dropna()
-        percentage_days = 10
-        percentage_days = percentage_days/100
-        record = record[record['days_traded_test'] > int(150*percentage_days)]
-        record = record[record['days_traded_live'] > int(100*percentage_days)]
-        record = record.drop_duplicates(subset=['model_name'], keep='last')
+        record = record.drop_duplicates(subset=['model_name'], keep='first')
         record = record.groupby(['date']).mean().reset_index()
         record['date'] = pd.to_datetime(record['date']) 
         plt.figure()
