@@ -76,6 +76,9 @@ class market :
         if not record_model_available :
             record = pd.DataFrame(columns=['date', 'model_name', 'stock', 'used', 'parameters', 'accuracy_test', 'ROC_test','trade_accuracy_test','days_traded_test', 'model_level_test_n','model_level_test_p', 'market_performance_test','model_performance_test', 'accuracy_live', 'ROC_live','trade_accuracy_live', 'days_traded_live','model_level_live_n','model_level_live_p', 'market_performance_live','model_performance_live','status'])
             record.to_csv('./data/record_model.csv', index = False)  
+            
+        if len(glob.glob('./models/*.csv')) == 0 :
+            os.system('rm ./data/model_features.csv')
         
     def files (self) :
         self.all = glob.glob(os.getcwd() + '/models/*.{}'.format('csv'))

@@ -98,7 +98,6 @@ def close_trades(api):
                     if status.status == 'rejected':
                         print("ORDER FAILED: Your Order was Rejected!!!")
             
-            time.sleep(2)
             orders = api.list_orders(status='open')
             positions = api.list_positions()
             
