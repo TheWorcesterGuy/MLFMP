@@ -79,6 +79,8 @@ class market :
             
         if len(glob.glob('./models/*.csv')) == 0 :
             os.system('rm ./data/model_features.csv')
+            os.system('rm -r ./Best_models')
+            os.system('mkdir ./Best_models')
         
     def files (self) :
         self.all = glob.glob(os.getcwd() + '/models/*.{}'.format('csv'))
