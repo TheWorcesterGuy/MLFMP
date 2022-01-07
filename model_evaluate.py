@@ -298,6 +298,7 @@ class market :
                 if self.threads > 1 :
                     print('\nCPU temperature too high, dropping down a thread\n')
                     self.threads -= 1
+                    time.sleep(2)
                 else :
                     print('\nCPU temperature too high, at minimum thread level\n')
                     self.threads = 1

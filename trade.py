@@ -19,13 +19,16 @@ import shutil
 import xgboost as xgb
 import lightgbm as lgb 
 import pytz
+from sklearn.metrics import accuracy_score
 from xgboost.sklearn import XGBClassifier
 from email_updates_error import *
+from scipy.signal import savgol_filter
+from scipy.interpolate import interp1d
 warnings.simplefilter(action = 'ignore')
 
 def main():
     trade().execute()
-    
+
 class trade :
     def __init__(self) :
         """Built-in method to inialize the global values for the module and do intial checks
@@ -193,23 +196,57 @@ class trade :
             record = record.groupby(['Traded']).mean()
             df = pd.merge(df, record, left_index=True, right_index=True)
 
-            df['K%'] = df['Balanced_probability'] - (1-df['Balanced_probability'])/df['rate']
-            df['K%'] = df['K%']/df['K%'].sum()
+            df['K%'] = df['Balanced_probability'] - (1-df['Balanced_probability'])/(1+(df['rate']-0.5))
+            df['K%'] = df['K%']/np.abs(df['K%'].sum())
+            
             
         df = df.round(4)
         df['Side'][df['Side']<0] = -1
         df['Side'][df['Side']>0] = 1
         df['Side'][df['Side']==0] = np.nan
-        df['K%'][df['K%']>0.1] = 0.15
-        df['K%'][df['K%']<0.01] = np.nan
+        df['K%'][df['K%']>0.20] = 0.20
+        df['K%'][df['K%']<0.001] = np.nan
         df = df.reset_index().rename({'index': 'Products'}, axis=1)
         df = df.dropna()
         df.to_csv('./data/to_trade.csv',index = False)
             
-            
         return df
+    
+    def probability_level(self) :
         
+        try :
+            df = pd.read_csv('./data/record_all_predictions.csv')
+            df['Date'] = pd.to_datetime(df['Date'])
+    
+            df['Prob'] = df['Probability']
+            df['Prob'].mask(df['Prob'] < 0.5, 1-df['Prob'], inplace=True)
+            
+            level = np.round(np.linspace(0.5,1,num=50),3)
+            
+            accuracy = []
+            for ll in level :
+                df_ = df[df['Prob']>ll]
+                df_ = df_.groupby(by=['Date','Traded']).mean()
+                df_['Prediction'][df_['Prediction']>0] = 1
+                df_['Prediction'][df_['Prediction']<0] = -1
+                accuracy.append(np.round(accuracy_score(df_['Prediction'], df_['Outcome'], normalize = True) * 100,2))
+                if np.isnan(accuracy[-1]) :
+                    break
+            
+            accuracy = savgol_filter(accuracy[:-1],21,2)
+            level = level[:len(accuracy)]
+            f_acc = interp1d(level,accuracy, kind="cubic",fill_value="extrapolate")
+            level = np.round(np.linspace(0.5,max(df['Prob']),num=1000),3)
+            accuracy = f_acc(level)
+            p_level = level[np.where(accuracy>70)[0][0]]
+            print('\nUsing probability threshold of %a\n' %p_level)
+            return p_level, (1-p_level)
         
+        except :
+            print('Failure in calculating probability threshold using predefined value')
+            print('\nUsing probability threshold of %a\n' %0.8)
+            return 0.8, 0.2
+                
     def trade_data(self) :
         """Class function used to create 'to_trade.csv' file with all predictions to be traded. 
         Function does two selections :
@@ -218,7 +255,8 @@ class trade :
             - Selection based on the threshold for each model. (Evaluated from model_evaluate.py)
         Function returns the trade information in 'to_trade.csv' for further use.
         """
-        
+        upper, lower = self.probability_level()
+        #upper, lower = 0.5, 0.5
         data = pd.read_csv('./data/trade_data.csv')
         stocks = data['Products'].tolist()
         stocks = list(set(stocks))
@@ -240,13 +278,13 @@ class trade :
             prob = np.array([])
             model_performance = np.array([])
             for i in range(len(probability)) :
-                if (probability[i] > 0.8) :
+                if (probability[i] > upper) :
                     side = np.append(side, 1)
                     prob_distance = np.append(prob_distance, probability[i] - level_p[i])
                     product = np.append(product, stock)
                     prob = np.append(prob, probability[i])
                     model_performance = np.append(model_performance, 0.01*performance[i]/(1-performance[i]*0.01))
-                if (probability[i] > 0.8) :
+                if (probability[i] < lower) :
                     side = np.append(side, -1)
                     prob_distance = np.append(prob_distance, (1-probability[i]) - level_n[i])
                     product = np.append(product, stock)
@@ -444,7 +482,8 @@ class trade :
                 os.system("python alpaca_trading.py")
             else :
                 print('\nNo trades above set probability level\n')
-
+                os.system('python email_updates_morning.py')
+                
             nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
             close = nyc_datetime.replace(hour=16, minute=0, second=0,microsecond=0)
             if nyc_datetime < close:
@@ -454,6 +493,7 @@ class trade :
         
         else : 
             print('\nEmpty trade sheet - No models or none up to date\n')
+            os.system('python email_updates_morning.py')
             
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
         close = nyc_datetime.replace(hour=16, minute=0, second=0,microsecond=0)

@@ -29,8 +29,8 @@ def main():
     trade_data, trade_value = distribution(api, buying_power)
     print('\nMoney allocation --- Completed\n')
     open_trade(api, trade_data)
-    print('\nTrading--- Completed\n')
     os.system('python email_updates_morning.py')
+    print('\nTrading--- Completed\n')
     nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
     close = nyc_datetime.replace(hour=15, minute=59, second=0,microsecond=0)
     difference = close - nyc_datetime
@@ -127,8 +127,8 @@ def distribution(api, buying_power) :
     df['Fractionable'] = Fractionable
     df['Variability'] = Variability
     df['Last_Stock_Value_$'] = Last_Stock_Value
-    df = df.sort_values(by=['K%'], ascending=False)
     df['Value_to_trade_$'] = (df['K%']*reduced_power)/df['Variability']
+    df = df.sort_values(by=['Value_to_trade_$'], ascending=False)
     df['Quantity'] = df['Value_to_trade_$']/df['Last_Stock_Value_$']
     
     df['Quantity'][df['Fractionable'] == False] = np.floor(df['Quantity'][df['Fractionable'] == False].tolist())
