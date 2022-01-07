@@ -43,16 +43,11 @@ class features:
         
         today = datetime.today()
 
-        # World_tickers = ['^FCHI','^STOXX50E','^AEX','000001.SS','^HSI','^N225','^BSESN','^SSMI','^IBEX']
-        #Reinforce_tickers = ['^VVIX','^VIX','SPY', 'QQQ','GC=F','CL=F','SI=F','EURUSD=X','JPY=X',
-                     #'XLF','XLK','XLV','XLY', 'INTC', 'AMZN', 'FB', 'AAPL', 'DIS', 'TSLA', 'GOOG', 
-                     #'GOOGL', 'MSFT', 'NFLX', 'NVDA', 'TWTR', 'AMD', 'WMT', 
-                     #'JPM',  'BAC', 'PG']
-
         World_tickers = ['^FCHI','^STOXX50E','^AEX','000001.SS','^HSI','^N225','^BSESN','^SSMI','^IBEX']
-        Reinforce_tickers = ['^VVIX','^VIX','SPY', 'QQQ']
-        if self.symbol not in Reinforce_tickers:
-            Reinforce_tickers.append(self.symbol)
+        Reinforce_tickers = ['^VVIX','^VIX','SPY', 'QQQ','GC=F','CL=F','SI=F','EURUSD=X','JPY=X',
+                     'XLF','XLK','XLV','XLY', 'INTC', 'AMZN', 'FB', 'AAPL', 'DIS', 'TSLA', 'GOOG', 
+                     'GOOGL', 'MSFT', 'NFLX', 'NVDA', 'TWTR', 'AMD', 'WMT', 
+                     'JPM',  'BAC', 'PG']
         
         combinations = [0, 1, 2, 3, 5, 7, 10, 15, 20, 50]
         
@@ -68,31 +63,29 @@ class features:
                 price_data[col] = ((support['Open'].shift(-1) - support['Close'].shift(k)) / support['Close'].shift(k)) * 100
             price_data[wt + ' High ' + str(0)] = ((support['High'] - support['Low']) / support['Open']) * 100
         
+        # add a 'stock' tag which correspond to the current stock name
+        Reinforce_tickers.append('stock')
         for rt in Reinforce_tickers:
+
+            rt_name = rt
+            if rt == 'stock':
+                rt = self.symbol
+                rt_name = 'stock'
             reinf = self.get_price(rt)
             reinf.set_index('Date', inplace=True)
 
-            rt_g = rt
-            if rt == self.symbol and self.symbol not in ['SPY', 'QQQ']:
-                rt_g = 'stock'
-
             for j in combinations:
-                col = rt_g + ' - ' + str(j)
+                col = rt_name + ' - ' + str(j)
                 price_data[col] = ((reinf['Open'] - reinf['Close'].shift(j)) / reinf['Close'].shift(j)) * 100
 
-            price_data[rt_g + ' High ' + str(1)] = ((reinf['High'] - reinf['Low']) / reinf['Open']) * 100
+            price_data[rt_name + ' High ' + str(1)] = ((reinf['High'] - reinf['Low']) / reinf['Open']) * 100
             
             if len(np.where(price_data.columns == 'Adj Close')[0]) > 0 :
                 price_data = price_data.drop(['Adj Close'], 1)
 
-        # copy all the 'stock' features for QQQ and SPY (features order must be identical)
-        if self.symbol in ['SPY', 'QQQ']:
-            for j in combinations:
-                price_data['stock - %s' % j] = price_data['%s - %s' % (self.symbol, j)]
-            price_data['stock High 1'] = price_data['%s High 1' % self.symbol]
+        # Standardization the stock column over the last 800 days
+        to_normalize_columns = [col for col in price_data.columns if 'stock -' in col]
 
-        # Standardization for each delta price features using the variation over the last 800 days
-        to_normalize_columns = price_data.columns[price_data.columns.get_loc('symbol') + 1:]
         for col in to_normalize_columns:
 
             delta_cols = []
