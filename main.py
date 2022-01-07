@@ -84,7 +84,7 @@ def trade_system():
             
             nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
             start_trade = nyc_datetime.replace(hour=8, minute=10, second=1,microsecond=0)
-            end_trade = nyc_datetime.replace(hour=8, minute=30, second=0,microsecond=0)
+            end_trade = nyc_datetime.replace(hour=8, minute=50, second=0,microsecond=0)
             if (nyc_datetime < end_trade) :
                 
                 if (nyc_datetime < start_trade) :

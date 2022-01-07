@@ -32,7 +32,7 @@ warnings.simplefilter(action = 'ignore')
 def main():
     print('\n Evaluating recorded models \n')
 
-    evaluation().charts()
+    #evaluation().charts()
     #evaluation().variable()
     #evaluation().money()
     #evaluation().account()
@@ -52,7 +52,6 @@ class evaluation :
         record = record[record['date'] > recent].dropna()
         print(record.mean())
         self.record = record.dropna()
-        
         
     def charts (self):
         
