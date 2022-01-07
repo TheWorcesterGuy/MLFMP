@@ -101,14 +101,17 @@ class features:
 
         price_data['change_in_price'] = (price_data['Close'] - price_data['Open'])
         
-        price_data = price_data.reset_index(drop=False)
+        price_data = price_data.reset_index(drop=False)        
         price_data['Date'] = price_data['Date'].shift(-1)
         price_data['Date'].iloc[-1] = today.strftime('%Y - %m - %d')
         price_data['Date'] = pd.to_datetime(price_data['Date'])
         price_data = price_data[price_data['Date'].dt.weekday < 5]
         price_data['Date'] = pd.to_datetime(price_data['Date']).dt.strftime('%Y-%m-%d')
+
+        # if stock market open then drop the duplicate record
+        price_data = price_data.drop_duplicates(subset=['Date'], keep='first')
         price_data.set_index('Date', inplace=True)
-        
+
         self.price_data = price_data
 
 
