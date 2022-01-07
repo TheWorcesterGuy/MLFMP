@@ -29,6 +29,8 @@ from email_updates_model_report import *
 from features_report import *
 import shap
 import copy
+import re
+import MacTmp
 warnings.filterwarnings("ignore")
 
 def main():
@@ -70,6 +72,8 @@ class market :
         self.price_data = pd.read_csv('./data/features_store.csv',',')
         self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.95))
         self.all = glob.glob(os.getcwd() + '/models/*.{}'.format('csv'))
+        self.CPU_high_counter = 0
+        self.threads = 6
         self.mode = random.randint(1,15)
         print('\nModel creation mode : %d\n' %self.mode)
        
@@ -202,7 +206,7 @@ class market :
         train_data = lgb.Dataset(X_train,label=y_train)
         param = {'num_leaves':leaves, 'objective':'binary','max_depth':depth,
                  'learning_rate':rate,'max_bin':bins,
-                 'num_threads':6, 'verbose': -1, 'is_unbalance': is_unbalance}
+                 'num_threads':self.threads, 'verbose': -1, 'is_unbalance': is_unbalance}
         
         num_round = 100
         lgbm = lgb.train(param,train_data,num_round, verbose_eval=False)
@@ -348,7 +352,22 @@ class market :
             end = nyc_datetime.replace(hour=16, minute=5, second=0,microsecond=0)
             if (nyc_datetime > start) & (nyc_datetime < end) :
                 time.sleep((end-nyc_datetime).seconds)
-                
+            
+            #Check CPU temperature
+            CPU = float(re.findall(r"[-+]?\d*\.\d+|\d+",MacTmp.CPU_Temp())[0])
+            print('\nCurrent CPU temperature is %a °C\n' %CPU)  # To get CPU Temperature
+            if (CPU > 95) :
+                self.CPU_high_counter += 1
+                if self.threads > 1 :
+                    print('\nCPU temperature too high, dropping down a thread\n')
+                    self.threads -= 1
+                else :
+                    print('\nCPU temperature too high, at minimum thread level\n')
+                    self.threads = 1
+                if (self.CPU_high_counter>15) :
+                    print('\nCPU temperature is holding too high, sleeping 5 minutes\n')
+                    time.sleep(60*5)  
+            
             self.predict = random.sample(self.possibilities, 1)[0]
             self.use_n = random.randint(1, 5)
             self.selector()

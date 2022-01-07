@@ -28,6 +28,8 @@ import pytz
 import time
 from email_updates_error import *
 from clean import *
+import re
+import MacTmp
 warnings.simplefilter(action = 'ignore')
 
 def main():
@@ -41,6 +43,8 @@ class market :
         self.path = os.getcwd()
         self.price_data = pd.read_csv('./data/features_store.csv',',')
         self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.95))
+        self.CPU_high_counter = 0
+        self.threads = 6
         #Halt during pre-trading times
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
         start = nyc_datetime.replace(hour=7, minute=30, second=0,microsecond=0)
@@ -199,7 +203,7 @@ class market :
         parameters = parameters[model.replace(".csv", "")].iloc[0]
         parameters = eval(parameters.replace('nan','np.nan'))
         self.parameters = dict(parameters)
-        self.parameters['num_threads'] = 4
+        self.parameters['num_threads'] = self.threads
         self.model = model
         self.predict = hold[0]
         self.use = hold[1:-1]
@@ -285,6 +289,22 @@ class market :
         
         self.files()            
         for model in self.all :
+            
+            #Check CPU temperature
+            CPU = float(re.findall(r"[-+]?\d*\.\d+|\d+",MacTmp.CPU_Temp())[0])
+            print('\nCurrent CPU temperature is %a °C\n' %CPU)  # To get CPU Temperature
+            if (CPU > 95) :
+                self.CPU_high_counter += 1
+                if self.threads > 1 :
+                    print('\nCPU temperature too high, dropping down a thread\n')
+                    self.threads -= 1
+                else :
+                    print('\nCPU temperature too high, at minimum thread level\n')
+                    self.threads = 1
+                if (self.CPU_high_counter>15) :
+                    print('\nCPU temperature is holding too high, sleeping 5 minutes\n')
+                    time.sleep(60*5)  
+                
             features = pd.read_csv('./data/model_features.csv')
             print(model)
             self.layout(model)
