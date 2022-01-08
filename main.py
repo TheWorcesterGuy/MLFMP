@@ -9,7 +9,8 @@ Created on Mon Aug 16 03:31:17 2021
 import os
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+import holidays
 import pytz
 from email_updates_error import *
 import glob
@@ -55,11 +56,13 @@ def trade_system():
     print('Sub codes called in this system can be changed and updated outside of market hours')
     path = os.getcwd()
     days_running = 0
+    us_holidays = holidays.UnitedStates()
+    us_holidays.append(['2022-11-25']) # Half day
     
-    while days_running < 100 :
+    while days_running < 350 :
         
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-        if (nyc_datetime.weekday() not in [5,6]):
+        if (nyc_datetime.weekday() not in [5,6]) & (nyc_datetime.date() not in us_holidays) :
             print('\n In Week trading \n')
             
             
@@ -105,7 +108,7 @@ def trade_system():
                     
                     
             nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))   
-            end_trade = nyc_datetime.replace(hour=8, minute=50, second=0,microsecond=0)
+            end_trade = nyc_datetime.replace(hour=8, minute=35, second=0,microsecond=0)
             if (nyc_datetime > end_trade):
                 start_first_update = (nyc_datetime + timedelta(days=1)).replace(hour=7, minute=0, second=0,microsecond=0)
                 difference = start_first_update - datetime.now(pytz.timezone('US/Eastern'))
@@ -115,7 +118,6 @@ def trade_system():
                 
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))     
         if (nyc_datetime.weekday() == 5) :
-            os.system("python3 update_features_store.py > ./log/features_store/update_log.txt")
             end_week = (nyc_datetime + timedelta(days=1)).replace(hour=0, minute=0, second=1,microsecond=0)
             difference = end_week - nyc_datetime
             print('\n Weekend stoppage (Saturday), sleeping', round((difference.seconds/60)/60,3), 'hours\n')
@@ -129,7 +131,14 @@ def trade_system():
             difference = end_week - nyc_datetime
             print('\n Weekend stoppage (Sunday), sleeping', round((difference.seconds/60)/60,3), 'hours\n')
             time.sleep(difference.seconds)
-            os.system("python3 update_features_store.py > ./log/features_store/update_log.txt")
+            
+            
+        nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))   
+        if (nyc_datetime.date() in us_holidays) :
+            next_day = (nyc_datetime + timedelta(days=1)).replace(hour=0, minute=0, second=1,microsecond=0)
+            difference = next_day - nyc_datetime
+            print('\n Bank holiday stoppage, sleeping', round((difference.seconds/60)/60,3), 'hours\n')
+            time.sleep(difference.seconds)
              
         days_running += 1
     
