@@ -45,18 +45,21 @@ class market :
         self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.95))
         self.CPU_high_counter = 0
         self.threads = 6
-        #Halt during pre-trading times
+        
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-        start = nyc_datetime.replace(hour=7, minute=30, second=0,microsecond=0)
-        end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
-        if (nyc_datetime > start) & (nyc_datetime < end) :
-            time.sleep((end-nyc_datetime).seconds)
-        #Halt before market close    
-        nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-        start = nyc_datetime.replace(hour=15, minute=30, second=0,microsecond=0)
-        end = nyc_datetime.replace(hour=16, minute=5, second=0,microsecond=0)
-        if (nyc_datetime > start) & (nyc_datetime < end) :
-            time.sleep((end-nyc_datetime).seconds)
+        if (nyc_datetime.weekday() not in [5,6]) :
+            #Halt during pre-trading times
+            nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+            start = nyc_datetime.replace(hour=7, minute=30, second=0,microsecond=0)
+            end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
+            if (nyc_datetime > start) & (nyc_datetime < end) :
+                time.sleep((end-nyc_datetime).seconds)
+            #Halt before market close    
+            nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+            start = nyc_datetime.replace(hour=15, minute=30, second=0,microsecond=0)
+            end = nyc_datetime.replace(hour=16, minute=5, second=0,microsecond=0)
+            if (nyc_datetime > start) & (nyc_datetime < end) :
+                time.sleep((end-nyc_datetime).seconds)
         
     def error_handling(self, error_message) :
         today = datetime.today()
@@ -388,7 +391,7 @@ class market :
             print('Model trade threshold negative side is', np.round(self.model_level_live_n*100,2))
             
             n_best_models = len(glob.glob(os.getcwd() + '/Best_models/*.{}'.format('csv')))
-            pass_threshold = 58 + (n_best_models/40)
+            pass_threshold = 58 + (n_best_models/100)
             percent_days = 10/100
             print('\n Using pass threshold of', np.round(pass_threshold,2))
             if  (self.ROC_test > pass_threshold) &  (self.ROC_live > pass_threshold) & \

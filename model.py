@@ -339,19 +339,22 @@ class market :
     def execute(self) :
         
         for k in range (0,20):
-            #Halt during pre-trading times
+            
             nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-            start = nyc_datetime.replace(hour=7, minute=30, second=0,microsecond=0)
-            end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
-            if (nyc_datetime > start) & (nyc_datetime < end) :
-                time.sleep((end-nyc_datetime).seconds)
-                
-            #Halt before market close    
-            nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-            start = nyc_datetime.replace(hour=15, minute=30, second=0,microsecond=0)
-            end = nyc_datetime.replace(hour=16, minute=5, second=0,microsecond=0)
-            if (nyc_datetime > start) & (nyc_datetime < end) :
-                time.sleep((end-nyc_datetime).seconds)
+            if (nyc_datetime.weekday() not in [5,6]) :
+                #Halt during pre-trading times
+                nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+                start = nyc_datetime.replace(hour=7, minute=30, second=0,microsecond=0)
+                end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
+                if (nyc_datetime > start) & (nyc_datetime < end) :
+                    time.sleep((end-nyc_datetime).seconds)
+                    
+                #Halt before market close    
+                nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
+                start = nyc_datetime.replace(hour=15, minute=30, second=0,microsecond=0)
+                end = nyc_datetime.replace(hour=16, minute=5, second=0,microsecond=0)
+                if (nyc_datetime > start) & (nyc_datetime < end) :
+                    time.sleep((end-nyc_datetime).seconds)
             
             #Check CPU temperature
             CPU = float(re.findall(r"[-+]?\d*\.\d+|\d+",MacTmp.CPU_Temp())[0])
