@@ -36,10 +36,10 @@ def main():
     #evaluation().variable()
     #evaluation().money()
     #evaluation().account()
-    evaluation().models_quality()
+    #evaluation().models_quality()
     #evaluation().models_quality_trade()
     #evaluation().results_traded()
-    #evaluation().results_predicted()
+    evaluation().results_predicted()
     
 class evaluation :
     def __init__(self):
@@ -52,6 +52,8 @@ class evaluation :
         record = record[record['date'] > recent].dropna()
         print(record.mean())
         self.record = record.dropna()
+        
+        self.start = datetime(2022, 1, 10, 0, 0, 0, 0)
         
     def charts (self):
         
@@ -133,11 +135,15 @@ class evaluation :
 
     def variable(self):    
         record = pd.read_csv('./data/record_model.csv').dropna()
+        record['date'] = pd.to_datetime(record['date'])
+        today = datetime.now()
+        recent = today - timedelta(days=2)
+        record = record[record['date'] > recent]
         accuracy_test = np.array(record['trade_accuracy_test'].to_list())#[:-5]
         accuracy_live = np.array(record['trade_accuracy_live'].to_list())
         ROC_live = np.array(record['ROC_live'].to_list())#[:-5]
         ROC_test = np.array(record['ROC_test'].to_list())
-        metric = (accuracy_live)
+        metric = (accuracy_live + accuracy_test)/2
         models = record['model_name'].to_list()
         models_len = [len(model.split('-')[1:-1]) for model in models]
         #metric = accuracy_live
@@ -163,7 +169,6 @@ class evaluation :
         plt.show
         
         plt.figure()
-        record = pd.read_csv('./data/record_model.csv').dropna()
         parameters = record.parameters.to_list()
         learning_rate = [eval(x)[3][1] for x in parameters]
         df = pd.DataFrame({'learning rate' : learning_rate, 'metric': metric})
@@ -175,7 +180,6 @@ class evaluation :
         plt.show()
         
         plt.figure()
-        record = pd.read_csv('./data/record_model.csv').dropna()
         parameters = record.parameters.to_list()
         bins = [eval(x)[4][1] for x in parameters]
         df = pd.DataFrame({'bins' : bins, 'metric': metric})
@@ -186,7 +190,6 @@ class evaluation :
         plt.show()
         
         plt.figure()
-        record = pd.read_csv('./data/record_model.csv').dropna()
         parameters = record.parameters.to_list()
         leaves = [eval(x)[0][1] for x in parameters]
         df = pd.DataFrame({'leaves' : leaves, 'metric': metric})
@@ -197,7 +200,6 @@ class evaluation :
         plt.show()
         
         plt.figure()
-        record = pd.read_csv('./data/record_model.csv').dropna()
         parameters = record.parameters.to_list()
         depth = [eval(x)[2][1] for x in parameters]
         df = pd.DataFrame({'depth' : depth, 'metric': metric})
@@ -210,6 +212,11 @@ class evaluation :
     def money(self) :
         
         df = pd.read_csv('./data/record_model.csv')
+        df['date'] = pd.to_datetime(df['date'])
+        today = datetime.now()
+        recent = today - timedelta(days=2)
+        if type(self.start) != int :
+            df = df[df['date'] > self.start]
         plt.figure()
         df = df.groupby(['accuracy_live']).mean().reset_index()
         plt.plot(np.array(df['accuracy_live']),np.array(df['model_performance_live']),'o')
@@ -218,6 +225,10 @@ class evaluation :
         plt.show()
         
         df = pd.read_csv('./data/record_model.csv')
+        df['date'] = pd.to_datetime(df['date'])
+        today = datetime.now()
+        recent = today - timedelta(days=2)
+        df = df[df['date'] > recent]
         plt.figure()
         df = df.groupby(['ROC_live']).mean().reset_index()
         plt.plot(np.array(df['ROC_live']),np.array(df['model_performance_live']),'o')
@@ -226,6 +237,10 @@ class evaluation :
         plt.show()
         
         df = pd.read_csv('./data/record_model.csv')
+        df['date'] = pd.to_datetime(df['date'])
+        today = datetime.now()
+        recent = today - timedelta(days=2)
+        df = df[df['date'] > recent]
         plt.figure()
         df = df.groupby(['ROC_live']).mean().reset_index()
         plt.plot((np.array(df['ROC_live'])+np.array(df['accuracy_live']))/2,np.array(df['model_performance_live']),'o')
@@ -235,7 +250,9 @@ class evaluation :
         
     def account (self) :
         account = pd.read_csv('./data/account.csv').dropna()
-        account['date'] = pd.to_datetime(account['Date']) 
+        account['date'] = pd.to_datetime(account['Date'])
+        if type(self.start) != int :
+            account = account[account['date'] > self.start]
         plt.figure()
         plt.plot(account['Date'],account['AM'],'r', label='AM')
         plt.plot(account['Date'],account['PM'],'g', label='PM')
@@ -266,10 +283,12 @@ class evaluation :
             
     def models_quality_trade(self):
         record = pd.read_csv('./data/record_traded.csv').dropna()
+        record['Date'] = pd.to_datetime(record['Date'])
+        if type(self.start) != int :
+            record = record[record['date'] > self.start]
         record['status'] = record['Prediction']*record['Outcome']
         record['status'][record['status']<0] = 0
         record = record.groupby(['Date']).mean().reset_index()
-        record['date'] = pd.to_datetime(record['Date']) 
         
         plt.figure()
         plt.plot(record['date'],record['status']*100,'g', label='Daily accurcay traded')
@@ -292,8 +311,9 @@ class evaluation :
 
     def results_traded(self) :
         record = pd.read_csv('./data/record_traded.csv')
-        record.replace('wait', np.nan, inplace=True)
         record['Date'] = pd.to_datetime(record['Date'])
+        if type(self.start) != int :
+            record = record[record['Date'] > self.start]
         record = record.drop(['Prob_distance'], axis=1)
         
         # Define the traget names
@@ -367,12 +387,14 @@ class evaluation :
             plt.show() 
         
         plt.figure()
+        bins = np.linspace(0,1,10)
         deltas = record['Delta'].dropna()
         df = pd.DataFrame({'d':deltas,'p':probs})
-        mask = df.index//5
-        df = df.groupby(mask).agg(['mean'])
-        plt.plot(df['p'], df['d'],'*')
-        plt.title("Probability to delta curve traded")
+        group = df.groupby(pd.cut(df.p, bins))
+        plot_centers = (bins [:-1] + bins [1:])/2
+        plot_values = group.d.mean()
+        plt.plot(plot_centers, plot_values)
+        plt.title("Probability to delta curve traded (averaged by bin)")
         plt.xlabel('Probability')
         plt.ylabel('Delta')
         if self.save :
@@ -426,9 +448,9 @@ class evaluation :
         
     def results_predicted(self) :
         record = pd.read_csv('./data/record_all_predictions.csv')
-        # record1 = record[record['Probability'] > 0.7]
-        # record2 = record[record['Probability'] < 0.3]
-        # record = pd.concat([record1,record2])
+        record['Date'] = pd.to_datetime(record['Date'])
+        if type(self.start) != int :
+            record = record[record['Date'] > self.start]
         record['Date'] = pd.to_datetime(record['Date'])
         record.replace('wait', np.nan, inplace=True)
         
@@ -502,12 +524,14 @@ class evaluation :
             plt.show() 
         
         plt.figure()
+        bins = np.linspace(0,1,20)
         deltas = record['Delta'].dropna().tolist()
         df = pd.DataFrame({'d':deltas,'p':probs})
-        mask = df.index//20
-        df = df.groupby(mask).agg(['mean'])
-        plt.plot(df['p'], df['d'],'*')
-        plt.title("Probability to delta curve all predictions")
+        group = df.groupby(pd.cut(df.p, bins))
+        plot_centers = (bins [:-1] + bins [1:])/2
+        plot_values = group.d.mean()
+        plt.plot(plot_centers, plot_values)
+        plt.title("Probability to delta curve all predictions (averaged by bin)")
         plt.xlabel('Probability')
         plt.ylabel('Delta')
         if self.save :

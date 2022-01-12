@@ -36,13 +36,17 @@ plt.rcParams["figure.figsize"] = 10, 5
 money = 100000
 all_p = pd.read_csv('./data/record_all_predictions.csv')
 all_p['Date'] = pd.to_datetime(all_p['Date'])
+today = datetime.now()
+recent = today - timedelta(days=10)
+all_p = all_p[all_p['Date'] > recent]
+
 print('\n\nAll accuracy is : %a perc'% np.round(accuracy_score(all_p['Prediction'], all_p['Outcome'], normalize = True) * 100,2))
 
 df = all_p
 df['Prob'] = df['Probability']
 df['Prob'].mask(df['Prob'] < 0.5, 1-df['Prob'], inplace=True)
 
-level = np.round(np.linspace(0.5,1,num=100),3)
+level = np.round(np.linspace(0.5,1,num=50),3)
 
 acc = []
 days = []
@@ -61,24 +65,19 @@ for ll in level :
     if np.isnan(days[-1]) :
         break
 
-days = savgol_filter(days[:-1],21,2)
-acc = savgol_filter(acc[:-1],21,2)
-delta = savgol_filter(delta[:-1],21,2)
+acc = acc[:-1]
+days = days[:-1]
+delta = delta[:-1]
 level = level[:len(acc)]
- 
-f_acc = interp1d(level,acc, kind="cubic",fill_value="extrapolate")
-f_days = interp1d(level,days, kind="cubic",fill_value="extrapolate")
-f_delta = interp1d(level,delta, kind="cubic",fill_value="extrapolate")
-level = np.round(np.linspace(0.5,max(df['Prob']),num=1000),3)
 
 plt.figure()
 fig,ax = plt.subplots()
-ax.plot(level, f_acc(level) ,color="blue", label = 'accuracy')
+ax.plot(level, acc ,color="blue", label = 'accuracy')
 plt.legend(loc='upper right')
 ax.set_xlabel('Probability level',fontsize=14)
 ax.set_ylabel('accuracy',color="blue",fontsize=14) 
 ax2=ax.twinx()
-ax2.plot(level, f_days(level),color="red", label = 'Trades per day')
+ax2.plot(level, days,color="red", label = 'Trades per day')
 ax2.set_ylabel('Trades per day',color="red",fontsize=14)
 plt.legend(loc='upper left')
 #plt.savefig('./Images/trades per day per level.png')
@@ -87,16 +86,19 @@ plt.legend(loc='upper left')
 
 plt.figure()
 fig,ax = plt.subplots()
-ax.plot(level, f_acc(level) ,color="blue", label = 'accuracy')
+ax.plot(level, acc ,color="blue", label = 'accuracy')
 plt.legend(loc='upper right')
 ax.set_xlabel('Probability level',fontsize=14)
 ax.set_ylabel('accuracy',color="blue",fontsize=14) 
 ax2=ax.twinx()
-ax2.plot(level, f_days(level),color="red", label = 'Return')
+ax2.plot(level, delta ,color="red", label = 'Return')
 ax2.set_ylabel('Average daily delta',color="red",fontsize=14)
 plt.legend(loc='upper left')
 #plt.savefig('./Images/average return per level.png')
 #plt.show()
+
+p_level = level[np.where(np.array(acc)>70)[0][0]]
+print('\nUsing probability threshold of %a\n' %p_level)
 
 
 

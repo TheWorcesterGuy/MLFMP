@@ -233,19 +233,16 @@ class trade :
                 if np.isnan(accuracy[-1]) :
                     break
             
-            accuracy = savgol_filter(accuracy[:-1],21,2)
+            accuracy = accuracy[:-1]
             level = level[:len(accuracy)]
-            f_acc = interp1d(level,accuracy, kind="cubic",fill_value="extrapolate")
-            level = np.round(np.linspace(0.5,max(df['Prob']),num=1000),3)
-            accuracy = f_acc(level)
-            p_level = level[np.where(accuracy>70)[0][0]]
+            p_level = level[np.where(np.array(accuracy)>65)[0][0]]
             print('\nUsing probability threshold of %a\n' %p_level)
             return p_level, (1-p_level)
         
         except :
             print('Failure in calculating probability threshold using predefined value')
-            print('\nUsing probability threshold of %a\n' %0.8)
-            return 0.8, 0.2
+            print('\nUsing probability threshold of %a\n' %0.7)
+            return 0.7, 0.3
                 
     def trade_data(self) :
         """Class function used to create 'to_trade.csv' file with all predictions to be traded. 
@@ -444,8 +441,8 @@ class trade :
             account_value = pd.read_csv('./data/account_value.csv')
             account = account.append(account_value, ignore_index=True)
             account.to_csv('./data/account.csv', index = False)  
-        
-        print(account.tail(1))
+            print(account.tail(1))
+            
         return
            
     def execute (self) :

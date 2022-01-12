@@ -67,27 +67,8 @@ def trade_system():
             
             
             nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-            start_first_update = nyc_datetime.replace(hour=7, minute=10, second=2,microsecond=0)
-            if (nyc_datetime < start_first_update):
-                
-                nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-                difference = start_first_update - nyc_datetime
-                print('\nSleeping before first update', round((difference.seconds/60)/60,3), 'hours\n')
-                time.sleep(difference.seconds+1)
-                
-                print('\nFirst early morning update of features store \n')
-                os.system("python3 update_features_store.py > ./log/features_store/update_log.txt")
-                print('\nFirst early morning update of features store --- Completed\n')
-                
-                nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-                difference = nyc_datetime.replace(hour=8, minute=10, second=2,microsecond=0) - nyc_datetime
-                print('\n Sleeping before market', round((difference.seconds/60)/60,3), 'hours\n')
-                time.sleep(difference.seconds+1)
-            
-            
-            nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
             start_trade = nyc_datetime.replace(hour=8, minute=10, second=1,microsecond=0)
-            end_trade = nyc_datetime.replace(hour=8, minute=50, second=0,microsecond=0)
+            end_trade = nyc_datetime.replace(hour=8, minute=35, second=1,microsecond=0)
             if (nyc_datetime < end_trade) :
                 
                 if (nyc_datetime < start_trade) :

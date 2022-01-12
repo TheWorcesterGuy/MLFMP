@@ -74,7 +74,7 @@ class market :
         self.all = glob.glob(os.getcwd() + '/models/*.{}'.format('csv'))
         self.CPU_high_counter = 0
         self.threads = 6
-        self.mode = random.randint(1,15)
+        self.mode = random.randint(1,12)
         print('\nModel creation mode : %d\n' %self.mode)
        
     def stock_matrix(self) :
@@ -288,44 +288,53 @@ class market :
             record = record.drop_duplicates(subset=['model_name'], keep='last')
             record['date'] = pd.to_datetime(record['date'])
             today = datetime.now()
-            recent = today - timedelta(days=7)
+            recent = today - timedelta(days=2)
             record = record[record['date'] > recent].dropna()
-            
-            # percentage_days = 10
-            # record = record[record['days_traded_test'] > int(150*percentage_days/100)]
-            # record = record[record['days_traded_live'] > int(100*percentage_days/100)]
-            
-            models = record['model_name'].tolist()
-            accuracy_test = np.array(record['trade_accuracy_test'].to_list())#[:-5]
-            accuracy_live = np.array(record['trade_accuracy_live'].to_list())
-            ROC_live = np.array(record['ROC_live'].to_list())#[:-5]
-            ROC_test = np.array(record['ROC_test'].to_list())
-            metric = (ROC_live + ROC_test + accuracy_test + accuracy_live)/4
-            
-            parameters = record.parameters.to_list()
-            shaps = [float(model.split('-')[-1]) for model in models]
-            num_leaves = [int(eval(x)[0][1]) for x in parameters]
-            max_depth = [int(eval(x)[2][1]) for x in parameters]
-            learning_rate = [eval(x)[3][1] for x in parameters]
-            bins = [int(eval(x)[4][1]) for x in parameters]
-            is_unbalance = [int(eval(x)[7][1]) for x in parameters]
-            
-            df = pd.DataFrame({'shaps' : shaps, 'num_leaves' : num_leaves, 'max_depth': max_depth, 
-                               'learning_rate' :learning_rate, 'bins': bins,
-                               'is_unbalance': is_unbalance, 'metric': metric})
-            ml_parameters = pd.DataFrame()
-            
-            ml_parameters['num_leaves'] = [df.groupby(['num_leaves']).mean().reset_index().sort_values(by=['metric'], ascending=False)['num_leaves'].iloc[0]]
-            ml_parameters['max_depth'] = [df.groupby(['max_depth']).mean().reset_index().sort_values(by=['metric'], ascending=False)['max_depth'].iloc[0]]
-            ml_parameters['learning_rate'] = [df.groupby(['learning_rate']).mean().reset_index().sort_values(by=['metric'], ascending=False)['learning_rate'].iloc[0]]
-            ml_parameters['bins'] = [df.groupby(['bins']).mean().reset_index().sort_values(by=['metric'], ascending=False)['bins'].iloc[0]]
-            ml_parameters['is_unbalance'] = [df.groupby(['is_unbalance']).mean().reset_index().sort_values(by=['metric'], ascending=False)['is_unbalance'].iloc[0]]
-    
-            df = df[df['shaps']>0]
-            if len(df)>0:
-                ml_parameters['shaps'] = [df.groupby(['shaps']).mean().reset_index().sort_values(by=['metric'], ascending=False)['shaps'].iloc[0]]
-            else:
+            if len(record) > 0 :
+                
+                # percentage_days = 10
+                # record = record[record['days_traded_test'] > int(150*percentage_days/100)]
+                # record = record[record['days_traded_live'] > int(100*percentage_days/100)]
+                
+                models = record['model_name'].tolist()
+                accuracy_test = np.array(record['trade_accuracy_test'].to_list())#[:-5]
+                accuracy_live = np.array(record['trade_accuracy_live'].to_list())
+                ROC_live = np.array(record['ROC_live'].to_list())#[:-5]
+                ROC_test = np.array(record['ROC_test'].to_list())
+                metric = (ROC_live + ROC_test + accuracy_test + accuracy_live)/4
+                
+                parameters = record.parameters.to_list()
+                shaps = [float(model.split('-')[-1]) for model in models]
+                num_leaves = [int(eval(x)[0][1]) for x in parameters]
+                max_depth = [int(eval(x)[2][1]) for x in parameters]
+                learning_rate = [eval(x)[3][1] for x in parameters]
+                bins = [int(eval(x)[4][1]) for x in parameters]
+                is_unbalance = [int(eval(x)[7][1]) for x in parameters]
+                
+                df = pd.DataFrame({'shaps' : shaps, 'num_leaves' : num_leaves, 'max_depth': max_depth, 
+                                   'learning_rate' :learning_rate, 'bins': bins,
+                                   'is_unbalance': is_unbalance, 'metric': metric})
+                ml_parameters = pd.DataFrame()
+                
+                ml_parameters['num_leaves'] = [df.groupby(['num_leaves']).mean().reset_index().sort_values(by=['metric'], ascending=False)['num_leaves'].iloc[0]]
+                ml_parameters['max_depth'] = [df.groupby(['max_depth']).mean().reset_index().sort_values(by=['metric'], ascending=False)['max_depth'].iloc[0]]
+                ml_parameters['learning_rate'] = [df.groupby(['learning_rate']).mean().reset_index().sort_values(by=['metric'], ascending=False)['learning_rate'].iloc[0]]
+                ml_parameters['bins'] = [df.groupby(['bins']).mean().reset_index().sort_values(by=['metric'], ascending=False)['bins'].iloc[0]]
+                ml_parameters['is_unbalance'] = [df.groupby(['is_unbalance']).mean().reset_index().sort_values(by=['metric'], ascending=False)['is_unbalance'].iloc[0]]
+        
+                df = df[df['shaps']>0]
+                if len(df)>0:
+                    ml_parameters['shaps'] = [df.groupby(['shaps']).mean().reset_index().sort_values(by=['metric'], ascending=False)['shaps'].iloc[0]]
+                else:
+                    ml_parameters['shaps'] = 0.02
+            else :
+                ml_parameters['num_leaves'] = 400
+                ml_parameters['max_depth'] = 6
+                ml_parameters['learning_rate'] = 0.01
+                ml_parameters['bins'] = 50
+                ml_parameters['is_unbalance'] = 1
                 ml_parameters['shaps'] = 0.02
+                
         else:
             ml_parameters['num_leaves'] = 400
             ml_parameters['max_depth'] = 6
