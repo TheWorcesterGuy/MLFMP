@@ -24,10 +24,13 @@ from xgboost.sklearn import XGBClassifier
 from email_updates_error import *
 from scipy.signal import savgol_filter
 from scipy.interpolate import interp1d
+from scipy.optimize import curve_fit
+
 warnings.simplefilter(action = 'ignore')
 
 def main():
     trade().execute()
+    print('\n-- Trading algorithme completed --\n')
 
 class trade :
     def __init__(self) :
@@ -211,17 +214,24 @@ class trade :
         df.to_csv('./data/to_trade.csv',index = False)
             
         return df
-    
+        
     def probability_level(self) :
+        
+        def Exp(x, A, B, C):
+            y = C + A*np.exp(B*x)
+            return y
         
         try :
             df = pd.read_csv('./data/record_all_predictions.csv')
+            df['Date'] = pd.to_datetime(df['Date'])
+            start = datetime(2022, 1, 10, 0, 0, 0, 0)
+            df = df[df['Date'] > start]
             df['Date'] = pd.to_datetime(df['Date'])
     
             df['Prob'] = df['Probability']
             df['Prob'].mask(df['Prob'] < 0.5, 1-df['Prob'], inplace=True)
             
-            level = np.round(np.linspace(0.5,1,num=50),3)
+            level = np.round(np.linspace(0.5,1,num=100),3)
             
             accuracy = []
             for ll in level :
@@ -235,9 +245,11 @@ class trade :
             
             accuracy = accuracy[:-1]
             level = level[:len(accuracy)]
-            p_level = level[np.where(np.array(accuracy)>65)[0][0]]
+            parameters, covariance = curve_fit(Exp, level, accuracy)
+            accuracy = parameters[2]+parameters[0]*np.exp(parameters[1]*level)
+            p_level = np.round(level[np.where(np.array(accuracy)>62.5)[0][0]],3)
             print('\nUsing probability threshold of %a\n' %p_level)
-            return p_level, (1-p_level)
+            return p_level, np.round((1-p_level),3)
         
         except :
             print('Failure in calculating probability threshold using predefined value')
@@ -493,10 +505,10 @@ class trade :
             os.system('python email_updates_morning.py')
             
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-        close = nyc_datetime.replace(hour=16, minute=0, second=0,microsecond=0)
+        close = nyc_datetime.replace(hour=16, minute=15, second=0,microsecond=0)
         if nyc_datetime < close:
             difference = close - nyc_datetime
-            print('\nWaiting for market close', round((difference.seconds/60)/60,2), 'hours\n')
+            print('\nWaiting for market close and data availability', round((difference.seconds/60)/60,2), 'hours\n')
             time.sleep(difference.seconds+60)
          
         self.record()
