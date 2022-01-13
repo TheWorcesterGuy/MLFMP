@@ -52,7 +52,7 @@ def main():
 
     df.loc[df['delta'] > 0, 'delta_class'] = 1
     df.loc[df['delta'] <= 0, 'delta_class'] = -1
-    df = df.drop(['Open', 'Close'], axis=1)
+    df = df.drop(['Open', 'Close', 'delta_class'], axis=1)
 
     df = df.sort_values('Date', ascending=False)
 
