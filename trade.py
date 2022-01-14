@@ -22,6 +22,7 @@ import pytz
 from sklearn.metrics import accuracy_score
 from xgboost.sklearn import XGBClassifier
 from email_updates_error import *
+from optimising_trading import f_acc
 from scipy.signal import savgol_filter
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
@@ -178,36 +179,27 @@ class trade :
         Prob_distance = df.groupby(['Products']).mean()['Prob_distance']
         df = df.groupby(['Products']).sum()
         df['Probability'] = Probability
+        df['Probability'].mask(df['Probability'] < 0.5, 1-df['Probability'], inplace=True)
         df['Balanced_probability'] = trade_probability + 0.5
         df['Model_performance'] = Model_performance
         df['Prob_distance'] = Prob_distance
-        
-        if (not len(glob.glob('./data/record_traded.csv'))) or (len(list(set(pd.read_csv('./data/record_traded.csv')['Traded'])))<18):
-
-            df['K%'] = df['Balanced_probability'] - (1-df['Balanced_probability'])/df['Model_performance']
-            df['K%'] = df['K%']/df['K%'].sum()
-            df = df.round(4)
-            df['Side'][df['Side']<0] = -1
-            df['Side'][df['Side']>0] = 1
-            df['Side'][df['Side']==0] = np.nan
-            
-        else :
-            record = pd.read_csv('./data/record_all_predictions.csv')
-            record['rate'] = record['Prediction']*record['Outcome']
-            record['rate'][record['rate']<0] = 0
-            del record['Probability']
-            record = record.groupby(['Traded']).mean()
-            df = pd.merge(df, record, left_index=True, right_index=True)
-
-            df['K%'] = df['Balanced_probability'] - (1-df['Balanced_probability'])/(1+(df['rate']-0.5))
-            df['K%'] = df['K%']/np.abs(df['K%'].sum())
-            
-            
-        df = df.round(4)
         df['Side'][df['Side']<0] = -1
         df['Side'][df['Side']>0] = 1
         df['Side'][df['Side']==0] = np.nan
-        df['K%'][df['K%']>0.20] = 0.20
+        
+        if (not len(glob.glob('./data/record_all_predictions.csv'))) or (len(list(set(pd.read_csv('./data/record_all_predictions.csv')['Traded'])))<18):
+
+            df['K%'] = df['Balanced_probability'] - (1-df['Balanced_probability'])/df['Model_performance']
+            df['K%'] = df['K%']/df['K%'].sum()
+            
+        else :
+            df['rate'] = df['Probability'].apply(f_acc)
+            df['K%'] = df['Probability'] - (1-df['Probability'])/(df['rate'])
+            df['K%'] = df['K%']/np.abs(df['K%'].sum())
+            
+        df['Probability'] = Probability
+        df = df.round(4)
+        df['K%'][df['K%']>0.30] = 0.30
         df['K%'][df['K%']<0.001] = np.nan
         df = df.reset_index().rename({'index': 'Products'}, axis=1)
         df = df.dropna()
@@ -217,38 +209,8 @@ class trade :
         
     def probability_level(self) :
         
-        def Exp(x, A, B, C):
-            y = C + A*np.exp(B*x)
-            return y
-        
         try :
-            df = pd.read_csv('./data/record_all_predictions.csv')
-            df['Date'] = pd.to_datetime(df['Date'])
-            start = datetime(2022, 1, 10, 0, 0, 0, 0)
-            df = df[df['Date'] > start]
-            df['Date'] = pd.to_datetime(df['Date'])
-    
-            df['Prob'] = df['Probability']
-            df['Prob'].mask(df['Prob'] < 0.5, 1-df['Prob'], inplace=True)
-            
-            level = np.round(np.linspace(0.5,1,num=100),3)
-            
-            accuracy = []
-            for ll in level :
-                df_ = df[df['Prob']>ll]
-                df_ = df_.groupby(by=['Date','Traded']).mean()
-                df_['Prediction'][df_['Prediction']>0] = 1
-                df_['Prediction'][df_['Prediction']<0] = -1
-                accuracy.append(np.round(accuracy_score(df_['Prediction'], df_['Outcome'], normalize = True) * 100,2))
-                if np.isnan(accuracy[-1]) :
-                    break
-            
-            accuracy = accuracy[:-1]
-            level = level[:len(accuracy)]
-            parameters, covariance = curve_fit(Exp, level, accuracy)
-            accuracy = parameters[2]+parameters[0]*np.exp(parameters[1]*level)
-            p_level = np.round(level[np.where(np.array(accuracy)>62.5)[0][0]],3)
-            print('\nUsing probability threshold of %a\n' %p_level)
+            p_level = f_acc(l=60, probability=False, acc_level=True)
             return p_level, np.round((1-p_level),3)
         
         except :

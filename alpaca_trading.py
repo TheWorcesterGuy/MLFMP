@@ -102,6 +102,7 @@ def distribution(api, buying_power) :
     """
     account = api.get_account()
     reduced_power = (float(account.buying_power)/2)
+    reduced_power = reduced_power - reduced_power*0.01
     print('The trading power today is: %a $' %reduced_power)
     df = pd.read_csv('./data/to_trade.csv')
     
@@ -127,7 +128,8 @@ def distribution(api, buying_power) :
     df['Fractionable'] = Fractionable
     df['Variability'] = Variability
     df['Last_Stock_Value_$'] = Last_Stock_Value
-    df['Value_to_trade_$'] = (df['K%']*reduced_power)/df['Variability']
+    df['K%'] = df['K%']/df['Variability']
+    df['Value_to_trade_$'] = (df['K%']*reduced_power)
     df = df.sort_values(by=['Value_to_trade_$'], ascending=False)
     df['Quantity'] = df['Value_to_trade_$']/df['Last_Stock_Value_$']
     
