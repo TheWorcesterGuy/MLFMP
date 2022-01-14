@@ -83,8 +83,9 @@ def trade_system():
                 
                 if len(glob.glob('./data/features_store.csv')) :
                     os.system("python3 trade.py > ./log/trading/trade_log" + nyc_datetime.strftime('%Y-%m-%d') + ".txt")
+                    print('\nTrading completed data available\n')
                 else :
-                    print('\n Features store not available, sleeping until user intervention (or new cycle)')
+                    print('\nFeatures store not available, sleeping until user intervention (or new cycle)')
                     time.sleep(43200)
                     
                     
@@ -93,7 +94,7 @@ def trade_system():
             if (nyc_datetime > end_trade):
                 start_first_update = (nyc_datetime + timedelta(days=1)).replace(hour=7, minute=0, second=0,microsecond=0)
                 difference = start_first_update - datetime.now(pytz.timezone('US/Eastern'))
-                print('\n Out of model trading hours, sleeping :', round((difference.seconds/60)/60,3), 'hours\n')
+                print('\nOut of model trading hours, sleeping :', round((difference.seconds/60)/60,3), 'hours\n')
                 time.sleep(difference.seconds)
                 
                 

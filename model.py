@@ -288,7 +288,7 @@ class market :
             record = record.drop_duplicates(subset=['model_name'], keep='last')
             record['date'] = pd.to_datetime(record['date'])
             today = datetime.now()
-            recent = today - timedelta(days=2)
+            recent = today - timedelta(days=5)
             record = record[record['date'] > recent].dropna()
             if len(record) > 0 :
                 

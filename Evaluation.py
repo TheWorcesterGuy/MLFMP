@@ -37,7 +37,7 @@ def main():
     #evaluation().money()
     #evaluation().account()
     #evaluation().models_quality()
-    #evaluation().models_quality_trade()
+    evaluation().models_quality_trade()
     #evaluation().results_traded()
     evaluation().results_predicted()
     
@@ -52,12 +52,15 @@ class evaluation :
         record = record[record['date'] > recent].dropna()
         print(record.mean())
         self.record = record.dropna()
-        
-        self.start = datetime(2022, 1, 10, 0, 0, 0, 0)
+        #self.start = 0
+        self.start = datetime(2022, 1, 9, 0, 0, 0, 0)
         
     def charts (self):
         
         record = self.record
+        record['date'] = pd.to_datetime(record['date'])
+        if type(self.start) != int :
+            record = record[record['date'] > self.start]
         percentage_days = 10
         percentage_days = percentage_days/100
         record = record[record['days_traded_test'] > int(150*percentage_days)]
@@ -136,6 +139,8 @@ class evaluation :
     def variable(self):    
         record = pd.read_csv('./data/record_model.csv').dropna()
         record['date'] = pd.to_datetime(record['date'])
+        if type(self.start) != int :
+            record = record[record['date'] > self.start]
         today = datetime.now()
         recent = today - timedelta(days=2)
         record = record[record['date'] > recent]
@@ -261,12 +266,18 @@ class evaluation :
         plt.ylabel('Account value')
         plt.legend()
         plt.show()
+        gain = (account['PM'].iloc[-1] - account['AM'].iloc[0])/account['AM'].iloc[0]
+        gain = round(gain*100,2)
+        print('Gain/Loss percent on account %a' %gain)
         
     def models_quality(self):
         record = pd.read_csv('./data/record_model.csv').dropna()
         record = record.drop_duplicates(subset=['model_name'], keep='first')
         record = record.groupby(['date']).mean().reset_index()
         record['date'] = pd.to_datetime(record['date']) 
+        record['date'] = pd.to_datetime(record['date'])
+        if type(self.start) != int :
+            record = record[record['date'] > self.start]
         plt.figure()
         plt.plot(record['date'],record['trade_accuracy_test'],'g', label='Accuracy test')
         plt.plot(record['date'],record['ROC_test'],'--g', label='ROC test')
@@ -285,21 +296,23 @@ class evaluation :
         record = pd.read_csv('./data/record_traded.csv').dropna()
         record['Date'] = pd.to_datetime(record['Date'])
         if type(self.start) != int :
-            record = record[record['date'] > self.start]
+            record = record[record['Date'] > self.start]
         record['status'] = record['Prediction']*record['Outcome']
         record['status'][record['status']<0] = 0
         record = record.groupby(['Date']).mean().reset_index()
         
         plt.figure()
-        plt.plot(record['date'],record['status']*100,'g', label='Daily accurcay traded')
+        plt.plot(record['Date'],record['status']*100,'g', label='Daily accuracy traded')
         
         record = pd.read_csv('./data/record_all_predictions.csv').dropna()
+        record['Date'] = pd.to_datetime(record['Date']) 
+        if type(self.start) != int :
+            record = record[record['Date'] > self.start]
         record['status'] = record['Prediction']*record['Outcome']
         record['status'][record['status']<0] = 0
         record = record.groupby(['Date']).mean().reset_index()
-        record['date'] = pd.to_datetime(record['Date']) 
 
-        plt.plot(record['date'],record['status']*100,'r', label='Daily accurcay all')
+        plt.plot(record['Date'],record['status']*100,'r', label='Daily accuracy all')
         plt.xticks(rotation='vertical')
         plt.xlabel('Date')
         plt.ylabel('Metric')
