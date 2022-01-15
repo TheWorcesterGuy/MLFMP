@@ -37,23 +37,26 @@ def main():
     #evaluation().money()
     #evaluation().account()
     #evaluation().models_quality()
-    evaluation().models_quality_trade()
+    #evaluation().models_quality_trade()
     #evaluation().results_traded()
-    evaluation().results_predicted()
+    evaluation(True, False).results_predicted()
     
 class evaluation :
-    def __init__(self):
-        self.save = False
+    def __init__(self, save = False, verbose = True):
+        self.save = save
+        self.verbose = verbose
         record = pd.read_csv('./data/record_model.csv')
         record = record.drop_duplicates(subset=['model_name'], keep='last')
         record['date'] = pd.to_datetime(record['date'])
         today = datetime.now()
         recent = today - timedelta(days=1)
         record = record[record['date'] > recent].dropna()
-        print(record.mean())
         self.record = record.dropna()
         #self.start = 0
         self.start = datetime(2022, 1, 9, 0, 0, 0, 0)
+        
+        if self.verbose :
+            print(record.mean())
         
     def charts (self):
         
@@ -86,9 +89,10 @@ class evaluation :
             mean_live_ROC_thr.append(np.mean(record['trade_accuracy_live'][record['ROC_test'] > value].to_list()))
             std_live_ROC_thr.append(np.std(record['trade_accuracy_live'][record['ROC_test'] > value].to_list()))
             mean_live_ROC_perf.append(np.mean(record['model_performance_live'][record['ROC_test'] > value].to_list()))
-            
-        print('mean_test', np.round(np.mean(accuracy_test),2))
-        print('mean_live', np.round(np.mean(accuracy_live),2))
+        
+        if self.verbose :
+            print('mean_test', np.round(np.mean(accuracy_test),2))
+            print('mean_live', np.round(np.mean(accuracy_live),2))
         
         plt.title('Mean live accuracy over threshold')
         plt.xlabel('Test accuracy threshold')
@@ -97,6 +101,7 @@ class evaluation :
         plt.yscale('log')
         if self.save :
             plt.savefig('./Images/Mean live accuracy over threshold.png')
+            plt.close()
         else :
             plt.show()
         
@@ -107,6 +112,7 @@ class evaluation :
         plt.yscale('log')
         if self.save :
             plt.savefig('./Images/Mean live accuracy over ROC threshold.png')
+            plt.close()
         else :    
             plt.show()
         
@@ -123,6 +129,7 @@ class evaluation :
         plt.yscale('log')
         if self.save :
             plt.savefig('./Images/Trading results over threshold.png')
+            plt.close()
         else :
             plt.show()
         
@@ -133,6 +140,7 @@ class evaluation :
         plt.yscale('log')
         if self.save :
             plt.savefig('./Images/Trading results over ROC threshold.png')
+            plt.close()
         else :
             plt.show()
 
@@ -263,12 +271,21 @@ class evaluation :
         plt.plot(account['Date'],account['PM'],'g', label='PM')
         plt.xticks(rotation='vertical')
         plt.xlabel('Date')
-        plt.ylabel('Account value')
+        plt.ylabel('Account value (in $)')
         plt.legend()
-        plt.show()
+        plt.xticks(rotation=45)
         gain = (account['PM'].iloc[-1] - account['AM'].iloc[0])/account['AM'].iloc[0]
         gain = round(gain*100,2)
-        print('Gain/Loss percent on account %a' %gain)
+        plt.title("Account value since {}, change in value of {} %".format(self.start.strftime("%d/%m/%Y"), gain))
+        
+        if self.save :
+            plt.savefig('./Images/account.png')
+            plt.close()
+        else :
+            plt.show()
+        
+        if self.verbose :
+            print('Gain/Loss percent on account %a' %gain)
         
     def models_quality(self):
         record = pd.read_csv('./data/record_model.csv').dropna()
@@ -283,12 +300,14 @@ class evaluation :
         plt.plot(record['date'],record['ROC_test'],'--g', label='ROC test')
         plt.plot(record['date'],record['trade_accuracy_live'],'r', label='Accuracy live')
         plt.plot(record['date'],record['ROC_live'],'--r', label='ROC live')
-        plt.xticks(rotation='vertical')
+        plt.xticks(rotation=45)
+        plt.title("Quality of models since {}".format(self.start.strftime("%d/%m/%Y")))
         plt.xlabel('Date')
-        plt.ylabel('Matric')
+        plt.ylabel('Metric')
         plt.legend()
         if self.save :
             plt.savefig('./Images/models_quality.png')
+            plt.close()
         else :
             plt.show()
             
@@ -313,12 +332,14 @@ class evaluation :
         record = record.groupby(['Date']).mean().reset_index()
 
         plt.plot(record['Date'],record['status']*100,'r', label='Daily accuracy all')
-        plt.xticks(rotation='vertical')
+        plt.xticks(rotation=45)
+        plt.title("Quality of predictions and trades since {}".format(self.start.strftime("%d/%m/%Y")))
         plt.xlabel('Date')
-        plt.ylabel('Metric')
+        plt.ylabel('Accuracy')
         plt.legend()
         if self.save :
             plt.savefig('./Images/trade_quality.png')
+            plt.close()
         else :
             plt.show()
 
@@ -354,20 +375,22 @@ class evaluation :
         recall = np.round(true_positives / (true_positives + false_negatives),3)
         specificity = np.round(true_negatives / (true_negatives + false_positives),3)
         
-        #self.ROC = average_precision_score(y_test, probs[:, 1])
-        print('\nFor traded predictions:')
-        print('Accuracy: {}'.format(float(accuracy)))
-        print('Percision: {}'.format(float(percision)))
-        print('Recall: {}'.format(float(recall)))
-        print('Specificity: {}'.format(float(specificity)))
+        if self.verbose :
+            print('\nFor traded predictions:')
+            print('Accuracy: {}'.format(float(accuracy)))
+            print('Percision: {}'.format(float(percision)))
+            print('Recall: {}'.format(float(recall)))
+            print('Specificity: {}'.format(float(specificity)))
         
-        cm = confusion_matrix(y_true, y_pred)
+        cm = confusion_matrix(y_true, y_pred, normalize='all')
         cmp = ConfusionMatrixDisplay(confusion_matrix=cm,
                                        display_labels=target_names)
         fig, ax = plt.subplots(figsize=(10,10))
         cmp.plot(ax=ax)
+        plt.title("Confusion Matrix of trades")
         if self.save :
-            plt.savefig('./Images/results_traded.png')
+            plt.savefig('./Images/Traded CM.png')
+            plt.close()
         else :
             plt.show()
         
@@ -389,13 +412,14 @@ class evaluation :
         
         fpr, tpr, thresholds = metrics.roc_curve(y_true, probability)
         roc_auc = metrics.auc(fpr, tpr)
-        display = metrics.RocCurveDisplay(fpr=fpr, tpr=tpr, roc_auc=roc_auc, estimator_name='Random Forest')
+        display = metrics.RocCurveDisplay(fpr=fpr, tpr=tpr, roc_auc=roc_auc, estimator_name='lightgbm')
         display.plot()  
         plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r', label='Chance', alpha=.8)
         plt.title("ROC traded")
         plt.legend()
         if self.save :
-            plt.savefig('./Images/ROC traded.png')
+            plt.savefig('./Images/Traded ROC.png')
+            plt.close()
         else : 
             plt.show() 
         
@@ -411,7 +435,8 @@ class evaluation :
         plt.xlabel('Probability')
         plt.ylabel('Delta')
         if self.save :
-            plt.savefig('./Images/Probability to delta curve traded.png')
+            plt.savefig('./Images/Traded probability to delta curve.png')
+            plt.close()
         else :
             plt.show()
         
@@ -455,7 +480,8 @@ class evaluation :
         plt.title("Veracity Traded")
         plt.legend()
         if self.save :
-            plt.savefig('./Images/Veracity Traded.png')
+            plt.savefig('./Images/Traded veracity.png')
+            plt.close()
         else :
             plt.show()
         
@@ -492,20 +518,22 @@ class evaluation :
         recall = np.round(true_positives / (true_positives + false_negatives),3)
         specificity = np.round(true_negatives / (true_negatives + false_positives),3)
         
-        #self.ROC = average_precision_score(y_test, probs[:, 1])
-        print('\nFor all predictions:')
-        print('Accuracy: {}'.format(float(accuracy)))
-        print('Percision: {}'.format(float(percision)))
-        print('Recall: {}'.format(float(recall)))
-        print('Specificity: {}'.format(float(specificity)))
+        if self.verbose :
+            print('\nFor all predictions:')
+            print('Accuracy: {}'.format(float(accuracy)))
+            print('Percision: {}'.format(float(percision)))
+            print('Recall: {}'.format(float(recall)))
+            print('Specificity: {}'.format(float(specificity)))
         
-        cm = confusion_matrix(y_true, y_pred)
+        cm = confusion_matrix(y_true, y_pred, normalize='all')
         cmp = ConfusionMatrixDisplay(confusion_matrix=cm,
                                        display_labels=target_names)
         fig, ax = plt.subplots(figsize=(10,10))
         cmp.plot(ax=ax)
+        plt.title("Confusion Matrix of predictions")
         if self.save :
-            plt.savefig('./Images/results_predicted.png')
+            plt.savefig('./Images/Predicted CM.png')
+            plt.close()
         else :
             plt.show()
         
@@ -526,13 +554,15 @@ class evaluation :
         
         fpr, tpr, thresholds = metrics.roc_curve(y_true, probability)
         roc_auc = metrics.auc(fpr, tpr)
-        display = metrics.RocCurveDisplay(fpr=fpr, tpr=tpr, roc_auc=roc_auc, estimator_name='Random Forest')
+        display = metrics.RocCurveDisplay(fpr=fpr, tpr=tpr, roc_auc=roc_auc, estimator_name='lightgbm')
         display.plot()  
         plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r', label='Chance', alpha=.8)
         plt.title("ROC all predictions")
         plt.legend()
         if self.save :
-            plt.savefig('./Images/ROC all predictions.png')
+            plt.ioff()
+            plt.savefig('./Images/Predicted ROC.png')
+            plt.close()
         else :
             plt.show() 
         
@@ -548,7 +578,9 @@ class evaluation :
         plt.xlabel('Probability')
         plt.ylabel('Delta')
         if self.save :
-            plt.savefig('./Images/Probability to delta curve all predictions.png')
+            plt.ioff()
+            plt.savefig('./Images/Predicted probability to delta curve.png')
+            plt.close()
         else :
             plt.show()
         
@@ -592,9 +624,68 @@ class evaluation :
         plt.title("Veracity all predictions")
         plt.legend()
         if self.save :
-            plt.savefig('./Images/Veracity all predictions.png')
+            plt.savefig('./Images/Predicted veracity.png')
+            plt.close()
         else :
             plt.show() 
+            
+    def history(self) :
+        start = self.start
+        possibilities =  ['INTC', 'AMZN', 'FB', 'AAPL', 'DIS', 'TSLA', 'GOOG', 'GOOGL', 
+                               'MSFT', 'NFLX', 'NVDA', 'TWTR', 'AMD', 'WMT', 'JPM', 'SPY', 'QQQ', 'BAC', 'PG']
+        
+        record_all = pd.read_csv('./data/record_all_predictions.csv')
+        record_traded = pd.read_csv('./data/record_traded.csv')        
+        
+        if type(start) != int :
+            record_all['Date'] = pd.to_datetime(record_all['Date'])
+            record_traded['Date'] = pd.to_datetime(record_traded['Date'])
+            record_all = record_all[record_all['Date']>start]
+            record_traded = record_traded[record_traded['Date']>start]
+        
+        all_pred = []
+        for p in possibilities :
+            all_pred.append(len(record_all[record_all['Traded']==p]))
+            
+        x = possibilities
+        y = all_pred
+        
+        x_pos = [i for i, _ in enumerate(y)]
+        
+        plt.figure()
+        plt.bar(x_pos, y)
+        plt.ylabel("Count")
+        plt.title("{} Predictions made since {}".format(len(record_all), start.strftime("%d/%m/%Y")))
+        plt.xticks(x_pos, x, rotation = 45)
+        
+        if self.save :
+            plt.savefig('./Images/History predicted.png')
+            plt.close()
+        else :
+            plt.show()
+        
+
+        traded = []
+        for p in possibilities :
+            traded.append(len(record_traded[record_traded['Traded']==p]))
+            
+        x = possibilities
+        y = traded
+        
+        x_pos = [i for i, _ in enumerate(y)]
+        
+        plt.figure()
+        plt.bar(x_pos, y)
+        plt.ylabel("Count")
+        plt.title("{} Trades completed since {}".format(len(record_traded), start.strftime("%d/%m/%Y")))
+        plt.xticks(x_pos, x, rotation = 45)
+        
+        if self.save :
+            plt.savefig('./Images/History traded.png')
+            plt.close()
+        else :
+            plt.show()
+                
         
         
 if __name__ == "__main__":
