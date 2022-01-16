@@ -31,6 +31,7 @@ import shap
 import copy
 import re
 import MacTmp
+from itertools import product
 warnings.filterwarnings("ignore")
 
 def main():
@@ -74,8 +75,6 @@ class market :
         self.all = glob.glob(os.getcwd() + '/models/*.{}'.format('csv'))
         self.CPU_high_counter = 0
         self.threads = 6
-        self.mode = random.randint(1,12)
-        print('\nModel creation mode : %d\n' %self.mode)
        
     def stock_matrix(self) :
         self.mode = 10
@@ -158,43 +157,30 @@ class market :
         return 
         
     def make_model (self) :
-        ml_parameters = pd.read_csv('./data/parameters.csv')
-        
+        ml_parameters = pd.read_csv('./data/parameters.csv').iloc[0]        
         if self.mode == 1 :
-            self.shaps = np.round(np.logspace(-3.5,-1,num=100),4)
-            self.shaps = random.choice(self.shaps)
-        else : 
-            self.shaps = ml_parameters['shaps'].iloc[0]
-        
-        if self.mode == 2 :
-            leaves = np.linspace(10,1000,100)
-            leaves = int(random.choice(leaves))
-        else : 
-            leaves = int(ml_parameters['num_leaves'].iloc[0])
+            shaps = np.round(np.logspace(-3.5,-1,num=20),4)
+            leaves = np.round(np.linspace(5,1000,30),0)
+            depth = np.round(np.linspace(2,20,10),0)       
+            rate = np.round(np.logspace(-2.5,-0.5,num=20),4)         
+            bins = np.round(np.linspace(100,900,30),0)   
+            is_unbalance = [0, 1]
             
-        if self.mode == 3 :
-            depth = np.linspace(2,10,9)
-            depth = int(random.choice(depth))
-        else : 
-            depth = int(ml_parameters['max_depth'].iloc[0])
+            choice = random.choice(list(product(shaps,leaves,depth,rate,bins,is_unbalance)))
             
-        if self.mode == 4 :
-            rate = np.round(np.logspace(-2.5,-0.5,num=20),4)
-            rate = random.choice(rate)
-        else : 
-            rate = ml_parameters['learning_rate'].iloc[0]
-            
-        if self.mode == 5 :
-            bins = np.linspace(100,900,100)
-            bins = int(random.choice(bins))
-        else : 
-            bins = int(ml_parameters['bins'].iloc[0])
-            
-        if self.mode == 6 :
-            is_unbalance = [True, False]
-            is_unbalance = random.choice(is_unbalance)
-        else : 
-            is_unbalance = bool(int(ml_parameters['is_unbalance'].iloc[0]))
+            self.shaps = choice[0]
+            leaves = int(choice[1])
+            depth = int(choice[2])      
+            rate = choice[3]         
+            bins = int(choice[4])  
+            is_unbalance = bool(choice[5])
+        else :
+            self.shaps = ml_parameters.shaps
+            leaves = int(ml_parameters.num_leaves)
+            depth = int(ml_parameters.max_depth)      
+            rate = ml_parameters.learning_rate    
+            bins = int(ml_parameters.bins)  
+            is_unbalance = bool(ml_parameters.is_unbalance)
             
         self.train_names = '-'.join(self.use)
         self.model = self.predict + '-' + self.train_names + '-' + str(self.shaps)
@@ -283,65 +269,55 @@ class market :
 
     def selector(self):
         
-        if len(glob.glob('./data/record_model.csv')):
+        try :
             record = pd.read_csv('./data/record_model.csv')
             record = record.drop_duplicates(subset=['model_name'], keep='last')
             record['date'] = pd.to_datetime(record['date'])
-            today = datetime.now()
-            recent = today - timedelta(days=5)
-            record = record[record['date'] > recent].dropna()
-            if len(record) > 0 :
+            # today = datetime.now()
+            # recent = today - timedelta(days=5)
+            # record = record[record['date'] > recent].dropna()
                 
-                # percentage_days = 10
-                # record = record[record['days_traded_test'] > int(150*percentage_days/100)]
-                # record = record[record['days_traded_live'] > int(100*percentage_days/100)]
+            percentage_days = 10
+            record = record[record['days_traded_test'] > int(150*percentage_days/100)]
+            record = record[record['days_traded_live'] > int(100*percentage_days/100)]
+            
+            models = record['model_name'].tolist()
+            accuracy_test = np.array(record['trade_accuracy_test'].to_list())#[:-5]
+            accuracy_live = np.array(record['trade_accuracy_live'].to_list())
+            ROC_live = np.array(record['ROC_live'].to_list())#[:-5]
+            ROC_test = np.array(record['ROC_test'].to_list())
+            metric = (ROC_live + ROC_test + accuracy_test + accuracy_live)/4
+            
+            parameters = record.parameters.to_list()
+            shaps = [float(model.split('-')[-1]) for model in models]
+            num_leaves = [int(eval(x)[0][1]) for x in parameters]
+            max_depth = [int(eval(x)[2][1]) for x in parameters]
+            learning_rate = [eval(x)[3][1] for x in parameters]
+            bins = [int(eval(x)[4][1]) for x in parameters]
+            is_unbalance = [int(eval(x)[7][1]) for x in parameters]
+            
+            df = pd.DataFrame({'shaps' : shaps, 'num_leaves' : num_leaves, 'max_depth': max_depth, 
+                               'learning_rate' :learning_rate, 'bins': bins,
+                               'is_unbalance': is_unbalance, 'metric': metric})
+            
+            best = df.groupby(['shaps','num_leaves', 'max_depth','learning_rate','bins','is_unbalance']).mean().sort_values(['metric'],ascending=False).index[0]
+            
+            ml_parameters = pd.DataFrame()
+            ml_parameters['shaps'] = [best[0]]
+            ml_parameters['num_leaves'] = [best[1]]
+            ml_parameters['max_depth'] = [best[2]]
+            ml_parameters['learning_rate'] = [best[3]]
+            ml_parameters['bins'] = best[4]
+            ml_parameters['is_unbalance'] = [best[5]]
                 
-                models = record['model_name'].tolist()
-                accuracy_test = np.array(record['trade_accuracy_test'].to_list())#[:-5]
-                accuracy_live = np.array(record['trade_accuracy_live'].to_list())
-                ROC_live = np.array(record['ROC_live'].to_list())#[:-5]
-                ROC_test = np.array(record['ROC_test'].to_list())
-                metric = (ROC_live + ROC_test + accuracy_test + accuracy_live)/4
-                
-                parameters = record.parameters.to_list()
-                shaps = [float(model.split('-')[-1]) for model in models]
-                num_leaves = [int(eval(x)[0][1]) for x in parameters]
-                max_depth = [int(eval(x)[2][1]) for x in parameters]
-                learning_rate = [eval(x)[3][1] for x in parameters]
-                bins = [int(eval(x)[4][1]) for x in parameters]
-                is_unbalance = [int(eval(x)[7][1]) for x in parameters]
-                
-                df = pd.DataFrame({'shaps' : shaps, 'num_leaves' : num_leaves, 'max_depth': max_depth, 
-                                   'learning_rate' :learning_rate, 'bins': bins,
-                                   'is_unbalance': is_unbalance, 'metric': metric})
-                ml_parameters = pd.DataFrame()
-                
-                ml_parameters['num_leaves'] = [df.groupby(['num_leaves']).mean().reset_index().sort_values(by=['metric'], ascending=False)['num_leaves'].iloc[0]]
-                ml_parameters['max_depth'] = [df.groupby(['max_depth']).mean().reset_index().sort_values(by=['metric'], ascending=False)['max_depth'].iloc[0]]
-                ml_parameters['learning_rate'] = [df.groupby(['learning_rate']).mean().reset_index().sort_values(by=['metric'], ascending=False)['learning_rate'].iloc[0]]
-                ml_parameters['bins'] = [df.groupby(['bins']).mean().reset_index().sort_values(by=['metric'], ascending=False)['bins'].iloc[0]]
-                ml_parameters['is_unbalance'] = [df.groupby(['is_unbalance']).mean().reset_index().sort_values(by=['metric'], ascending=False)['is_unbalance'].iloc[0]]
-        
-                df = df[df['shaps']>0]
-                if len(df)>0:
-                    ml_parameters['shaps'] = [df.groupby(['shaps']).mean().reset_index().sort_values(by=['metric'], ascending=False)['shaps'].iloc[0]]
-                else:
-                    ml_parameters['shaps'] = 0.02
-            else :
-                ml_parameters['num_leaves'] = 400
-                ml_parameters['max_depth'] = 6
-                ml_parameters['learning_rate'] = 0.01
-                ml_parameters['bins'] = 50
-                ml_parameters['is_unbalance'] = 1
-                ml_parameters['shaps'] = 0.02
-                
-        else:
-            ml_parameters['num_leaves'] = 400
-            ml_parameters['max_depth'] = 6
-            ml_parameters['learning_rate'] = 0.01
-            ml_parameters['bins'] = 50
-            ml_parameters['is_unbalance'] = 1
-            ml_parameters['shaps'] = 0.02
+        except:
+            ml_parameters = pd.DataFrame()
+            ml_parameters['shaps'] = [0.02]
+            ml_parameters['num_leaves'] = [400]
+            ml_parameters['max_depth'] = [2]
+            ml_parameters['learning_rate'] = [0.01]
+            ml_parameters['bins'] = [50]
+            ml_parameters['is_unbalance'] = [1]
                 
         ml_parameters.to_csv('./data/parameters.csv', index=False)
         
@@ -381,6 +357,8 @@ class market :
                     print('\nCPU temperature is holding too high, sleeping 5 minutes\n')
                     time.sleep(60*5)  
             
+            self.mode = random.randint(1,5)
+            print('\nModel creation mode : %d\n' %self.mode)
             self.predict = random.sample(self.possibilities, 1)[0]
             self.use_n = random.randint(1, 5)
             self.selector()
