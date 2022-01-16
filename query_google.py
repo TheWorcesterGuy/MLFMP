@@ -26,18 +26,18 @@ keywords = args[7:]
 
 # for couple Bullish / Bearish (if so, there will be brackets as it's a list in input)
 if '[' in keywords[0]:
-    temp_keyword = [val.replace("'", "").replace("[", "").replace("]", "").replace(",", "") for val in keywords]
-    keyword_query = temp_keyword
+    keyword = [val.replace("'", "").replace("[", "").replace("]", "").replace(",", "") for val in keywords]
+    keyword_query = keyword
 
 # for single keywords
 else:
     keyword = ' '.join(keywords)
     keyword_query = [keyword]
 
-                     
+          
 # set search category
 if keyword in ['FB', 'SPY', 'AMD', 'AAPL', 'AMZN', 'QQQ', 'TSLA', 'MSFT',
-                    'INTC', 'DIS', 'JPM', 'WMT', 'NFLX', 'GOOG', 'GOOGL', 'NVDA', 'TWTR', 'BAC', 'PG', 'VIX']:
+                    'INTC', 'DIS', 'JPM', 'WMT', 'NFLX', 'GOOG', 'GOOGL', 'NVDA', 'TWTR', 'BAC', 'PG', 'VIX', ['bullish', 'bearish']]:
     search_cat = 1163  # specifically related to financial markets
 
 else:

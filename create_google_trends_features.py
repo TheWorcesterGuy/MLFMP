@@ -75,25 +75,27 @@ def main():
 
     df = df.merge(df_stock[['Date', 'Open']], on='Date', how='left')
 
+    vars = df.columns[1:-3].tolist()
+
     # create shift stock variables
     shift_cols = []
     for k in range(1, 20):
         df['stock_shift_%s' % k] = df.groupby('time')['Open'].shift(k)
         shift_cols.append('stock_shift_%s' % k)
 
+    for col in vars:
+        shift_var_cols = []
+        for k in range(1, 20):
+            df['var_shift_%s' % k] = df.groupby('time')[col].shift(k)
+            shift_var_cols.append('var_shift_%s' % k)
 
-    shift_var_cols = []
-    for k in range(1, 20):
-        df['var_shift_%s' % k] = df.groupby('time')[google_trend].shift(k)
-        shift_var_cols.append('var_shift_%s' % k)
+        df[col] = df.apply(lambda row: correct_post_off_days_data(row, col, df['Date'].min()), axis=1)
+        df = df.drop(shift_var_cols, axis=1)
 
-    df[google_trend] = df.apply(lambda row: correct_post_off_days_data(row, col, df['Date'].min()), axis=1)
-    df = df.drop(shift_var_cols + shift_cols, axis=1)
-
+    df = df.drop(shift_cols, axis=1)
     # Drop weekends / public hoidays (when no opening of stock market)
     df = df[(df['Open'].notna()) | (df['Date'] == df['Date'].max())]
     df = df.drop(['Open', 'time', 'Date'], axis=1)
-
 
 
     # DAILY AGGREGATION 

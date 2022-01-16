@@ -24,13 +24,11 @@ def main():
     n_days = 14
 
     # Check if Google Trend update is allowed
-    check_update_validity()
+    #check_update_validity()
 
     google_trends = ['INTC', 'TSLA', 'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
         	  'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG', 'VIX', 'debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'stock risk',
-                     'investing.com']
-    #google_trends = ['PG']
-
+                     'investing.com', ['bullish', 'bearish']]
 
     if os.path.isfile('./data/temp_data.csv'):
         os.system('rm ./data/temp_data.csv')
@@ -54,12 +52,12 @@ def main():
             if len(files) > 0:
 
                 # first, remove the last 100 GT as we want them to be replaced by the older ones (recent GT are still unstable)
-                list_updt = [pd.read_csv(file) for file in glob.glob("./data/GOOGLE_TRENDS/%s/*.csv" % google_trend)]
+                list_updt = [pd.read_csv(file) for file in glob.glob("./data/GOOGLE_TRENDS/%s/*.csv" % google_trend_str)]
                 df_updt = pd.concat(list_updt, axis=0)
                 df_updt['date'] = pd.to_datetime(df_updt['date'], errors='coerce')
                 df_updt = df_updt.sort_values('date', ascending=True)
                 df_updt = df_updt.iloc[0:-100]
-                repartition_files(df_updt, google_trend, default_dir)
+                repartition_files(df_updt, google_trend_str, default_dir)
 
                 # find the latest datetime and resume downloading
                 list_gt = [pd.read_csv(file, lineterminator='\n') for file in
@@ -80,19 +78,18 @@ def main():
                 if start_date + pd.DateOffset(days=n_days) > final_date:
                     next_date = final_date + pd.DateOffset(days=1)
                     start_date = final_date - pd.DateOffset(days=n_days)
-                    filename = './data/GOOGLE_TRENDS/%s/current_file.csv' % google_trend_str
+                    filename = './data/GOOGLE_TRENDS/bullish_bearish/current_file.csv'
                     last_file = True
 
                 else:
                     next_date = start_date + pd.DateOffset(days=n_days)
-                    filename = 'data/GOOGLE_TRENDS/%s/Google_Trends_%s_week_%s.csv' % (
-                    google_trend_str, next_date.year, next_date.week)
+                    filename = 'data/GOOGLE_TRENDS/bullish_bearish/Google_Trends_%s_week_%s.csv' % (next_date.year, next_date.week)
                     last_file = False
 
                 while os.path.isfile('data/temp_data.csv') is False:
 
-                    os.system("python query_google.py %s %s %s %s %s %s %s" % (start_date.year, start_date.month, start_date.day,
-                                                                                   next_date.year, next_date.month, next_date.day, google_trend))
+                    os.system("python query_google.py %s %s %s %s %s %s %s %s" % (start_date.year, start_date.month, start_date.day,
+                                                                                   next_date.year, next_date.month, next_date.day, next_date.hour, str(google_trend)))
 
                 df = pd.read_csv('data/temp_data.csv')
                 df['isPartial'] = df['isPartial'].astype(str)
@@ -119,13 +116,12 @@ def main():
                 time.sleep(waiting_time)
 
             # repartition by month the updated files
-            list_updt = [pd.read_csv(file) for file in glob.glob("./data/GOOGLE_TRENDS/%s/*.csv" % google_trend)]
+            list_updt = [pd.read_csv(file) for file in glob.glob("./data/GOOGLE_TRENDS/%s/*.csv" % google_trend_str)]
             df_updt = pd.concat(list_updt, axis=0)
-            repartition_files(df_updt, google_trend, default_dir)
+            repartition_files(df_updt, google_trend_str, default_dir)
             
             print('Done downloading Google Trends for %s.\n\n' % google_trend)
             print('\n\n')
- 
 
         # For single keywords
         else:
@@ -178,7 +174,6 @@ def main():
                     last_file = False
 
                 while os.path.isfile('data/temp_data.csv') is False:
-                    print(start_date, next_date)
                     os.system("python query_google.py %s %s %s %s %s %s %s %s" % (start_date.year, start_date.month, start_date.day,
                                                                                    next_date.year, next_date.month, next_date.day, next_date.hour, str(google_trend)))
                 df = pd.read_csv('data/temp_data.csv')
@@ -271,10 +266,10 @@ def repartition_files(df_updt, google_trend, default_dir):
             df_year_month = df_year[df_year['month'] == month]
             if df_year_month.empty is False:
                 # if two duplicates for same date, we keep the one with larger value (avoid adding zeros)
-                df_year_month = df_year_month.sort_values(by=['date', google_trend], ascending=True)
+                df_year_month = df_year_month.sort_values(by=df_year_month.columns[:2].tolist(), ascending=True)
                 df_year_month = df_year_month.drop_duplicates(subset=['date'], keep='last')
                 # save file
-                df_year_month = df_year_month[['date', google_trend, 'isPartial']]
+                df_year_month = df_year_month[df_year_month.columns[:-3].tolist()]
                 df_year_month.to_csv('data/GOOGLE_TRENDS/%s/Google_Trends_%s_%s.csv' % (google_trend, year, month),
                                                 index=False)
 

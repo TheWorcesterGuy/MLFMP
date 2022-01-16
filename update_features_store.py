@@ -40,7 +40,7 @@ def main():
 
     google_trends_dir = ['INTC', 'TSLA', 'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
         	  'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG', 'debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk',
-                    'investing.com']
+                    'investing.com', 'bullish_bearish']
 
     start = datetime.now()
     t0 = time.time()
@@ -144,7 +144,7 @@ def merge_files(stocks):
 
     # merge encoded moods together to get a general mood features dataframe
     mood_list_df = []
-    for mood in ['debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk']:
+    for mood in ['debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk', 'bullish_bearish']:
         mood_list_df.append(pd.read_csv('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (mood, mood)))
 
     df_mood = reduce(lambda df1, df2: pd.merge(df1, df2, on='Date', how='inner'), mood_list_df)
