@@ -32,14 +32,15 @@ warnings.simplefilter(action = 'ignore')
 def main():
     print('\n Evaluating recorded models \n')
 
-    #evaluation().charts()
-    #evaluation().variable()
+    evaluation().charts()
+    #evaluation(True, False).variable()
     #evaluation().money()
     #evaluation().account()
     #evaluation().models_quality()
-    #evaluation().models_quality_trade()
+    evaluation().models_quality_trade()
     #evaluation().results_traded()
-    evaluation(True, False).results_predicted()
+    #evaluation().results_predicted()
+    #evaluation().history()
     
 class evaluation :
     def __init__(self, save = False, verbose = True):
@@ -52,7 +53,7 @@ class evaluation :
         recent = today - timedelta(days=1)
         record = record[record['date'] > recent].dropna()
         self.record = record.dropna()
-        #self.start = 0
+        #self.start = datetime(2021, 10, 1, 0, 0, 0, 0)
         self.start = datetime(2022, 1, 9, 0, 0, 0, 0)
         
         if self.verbose :
@@ -69,10 +70,15 @@ class evaluation :
         record = record[record['days_traded_test'] > int(150*percentage_days)]
         record = record[record['days_traded_live'] > int(100*percentage_days)]
         
+        #normalise by number of days traded 
+        record['trade_accuracy_live'] = record['trade_accuracy_live']
+        record['model_performance_live'] = record['model_performance_live']/record['days_traded_live']
+        
+        
         #record = record[record['status'] > 0]
-        accuracy_test = sorted(record['trade_accuracy_test'].to_list())[:-10]
-        accuracy_live = record['trade_accuracy_live'].to_list()
-        ROC_test = sorted(record['ROC_test'].to_list())[:-10]
+        accuracy_test = sorted((record['trade_accuracy_test']).to_list())[:-10]
+        accuracy_live = (record['trade_accuracy_live']).to_list()
+        ROC_test = sorted((record['ROC_test']).to_list())[:-10]
         
         mean_live_thr = []
         mean_live_perf = []
@@ -94,24 +100,24 @@ class evaluation :
             print('mean_test', np.round(np.mean(accuracy_test),2))
             print('mean_live', np.round(np.mean(accuracy_live),2))
         
-        plt.title('Mean live accuracy over threshold')
-        plt.xlabel('Test accuracy threshold')
-        plt.ylabel('Mean live accuracy above threshold')
+        plt.title('Mean live accuracy over test accuracy threshold (normalised by days traded)', fontsize=14)
+        plt.xlabel('Test accuracy threshold', fontsize=8)
+        plt.ylabel('Mean live accuracy above threshold (normalised by days traded)', fontsize=8)
         plt.plot(accuracy_test, mean_live_thr, 'o')
-        plt.yscale('log')
+        #plt.yscale('log')
         if self.save :
-            plt.savefig('./Images/Mean live accuracy over threshold.png')
+            plt.savefig('./Images/Mean live accuracy over test accuracy threshold.png')
             plt.close()
         else :
             plt.show()
         
-        plt.title('Mean live accuracy over ROC threshold')
-        plt.xlabel('Test ROC threshold')
-        plt.ylabel('Mean live accuracy above threshold')
+        plt.title('Mean live accuracy over test ROC threshold', fontsize=14)
+        plt.xlabel('Test ROC threshold', fontsize=8)
+        plt.ylabel('Mean live accuracy above threshold (normalised by days traded)', fontsize=8)
         plt.plot(ROC_test, mean_live_ROC_thr, 'o')
-        plt.yscale('log')
+        #plt.yscale('log')
         if self.save :
-            plt.savefig('./Images/Mean live accuracy over ROC threshold.png')
+            plt.savefig('./Images/Mean live accuracy over test ROC threshold.png')
             plt.close()
         else :    
             plt.show()
@@ -122,24 +128,24 @@ class evaluation :
         # plt.plot(accuracy_test, std_live_thr, 'o')
         # plt.show()
         
-        plt.title('Trading results over threshold')
-        plt.xlabel('Test accuracy threshold')
-        plt.ylabel('Live results over threshold')
+        plt.title('Trading results over test accuracy threshold (normalised by days traded)', fontsize=14)
+        plt.xlabel('Test accuracy threshold', fontsize=8)
+        plt.ylabel('Live results over threshold (normalised by days traded)', fontsize=8)
         plt.plot(accuracy_test, mean_live_perf, 'o')
-        plt.yscale('log')
+        #plt.yscale('log')
         if self.save :
-            plt.savefig('./Images/Trading results over threshold.png')
+            plt.savefig('./Images/Mean live trading results over accuracy threshold.png')
             plt.close()
         else :
             plt.show()
         
-        plt.title('Trading results over ROC threshold')
-        plt.xlabel('Test ROC threshold')
-        plt.ylabel('Live results over threshold')
+        plt.title('Trading results over test ROC threshold (normalised by days traded)', fontsize=14)
+        plt.xlabel('Test ROC threshold', fontsize=8)
+        plt.ylabel('Live results over threshold (normalised by days traded)', fontsize=8)
         plt.plot(ROC_test, mean_live_ROC_perf, 'o')
-        plt.yscale('log')
+        #plt.yscale('log')
         if self.save :
-            plt.savefig('./Images/Trading results over ROC threshold.png')
+            plt.savefig('./Images/Trading results over test ROC threshold.png')
             plt.close()
         else :
             plt.show()
@@ -268,15 +274,18 @@ class evaluation :
             account = account[account['date'] > self.start]
         plt.figure()
         plt.plot(account['Date'],account['AM'],'r', label='AM')
-        plt.plot(account['Date'],account['PM'],'g', label='PM')
+        plt.plot(account['Date'],account['PM'],'b', label='PM')
         plt.xticks(rotation='vertical')
         plt.xlabel('Date')
         plt.ylabel('Account value (in $)')
         plt.legend()
-        plt.xticks(rotation=45)
+        plt.xticks(rotation=45, fontsize=8)
         gain = (account['PM'].iloc[-1] - account['AM'].iloc[0])/account['AM'].iloc[0]
+        gain_per_day = 100*gain/len(account)
+        annualised_gain = np.round(((1+gain_per_day/100)**253 - 1) * 100,2)
         gain = round(gain*100,2)
-        plt.title("Account value since {}, change in value of {} %".format(self.start.strftime("%d/%m/%Y"), gain))
+        plt.title("Account value since {}\n Change in value of {} % - Average daily change {} %\n Annualized gain of {} %"\
+                  .format(self.start.strftime("%d/%m/%Y"), gain, np.round(gain_per_day,2), annualised_gain))
         
         if self.save :
             plt.savefig('./Images/account.png')
@@ -292,15 +301,14 @@ class evaluation :
         record = record.drop_duplicates(subset=['model_name'], keep='first')
         record = record.groupby(['date']).mean().reset_index()
         record['date'] = pd.to_datetime(record['date']) 
-        record['date'] = pd.to_datetime(record['date'])
         if type(self.start) != int :
             record = record[record['date'] > self.start]
         plt.figure()
-        plt.plot(record['date'],record['trade_accuracy_test'],'g', label='Accuracy test')
-        plt.plot(record['date'],record['ROC_test'],'--g', label='ROC test')
+        plt.plot(record['date'],record['trade_accuracy_test'],'b', label='Accuracy test')
+        plt.plot(record['date'],record['ROC_test'],'--b', label='ROC test')
         plt.plot(record['date'],record['trade_accuracy_live'],'r', label='Accuracy live')
         plt.plot(record['date'],record['ROC_live'],'--r', label='ROC live')
-        plt.xticks(rotation=45)
+        plt.xticks(rotation=45, fontsize=8)
         plt.title("Quality of models since {}".format(self.start.strftime("%d/%m/%Y")))
         plt.xlabel('Date')
         plt.ylabel('Metric')
@@ -321,7 +329,7 @@ class evaluation :
         record = record.groupby(['Date']).mean().reset_index()
         
         plt.figure()
-        plt.plot(record['Date'],record['status']*100,'g', label='Daily accuracy traded')
+        plt.plot(record['Date'],record['status']*100,'b', label='Daily accuracy traded')
         
         record = pd.read_csv('./data/record_all_predictions.csv').dropna()
         record['Date'] = pd.to_datetime(record['Date']) 
@@ -332,7 +340,7 @@ class evaluation :
         record = record.groupby(['Date']).mean().reset_index()
 
         plt.plot(record['Date'],record['status']*100,'r', label='Daily accuracy all')
-        plt.xticks(rotation=45)
+        plt.xticks(rotation=45, fontsize=8)
         plt.title("Quality of predictions and trades since {}".format(self.start.strftime("%d/%m/%Y")))
         plt.xlabel('Date')
         plt.ylabel('Accuracy')
@@ -414,7 +422,7 @@ class evaluation :
         roc_auc = metrics.auc(fpr, tpr)
         display = metrics.RocCurveDisplay(fpr=fpr, tpr=tpr, roc_auc=roc_auc, estimator_name='lightgbm')
         display.plot()  
-        plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r', label='Chance', alpha=.8)
+        plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='k', label='Chance', alpha=.8)
         plt.title("ROC traded")
         plt.legend()
         if self.save :
@@ -556,7 +564,7 @@ class evaluation :
         roc_auc = metrics.auc(fpr, tpr)
         display = metrics.RocCurveDisplay(fpr=fpr, tpr=tpr, roc_auc=roc_auc, estimator_name='lightgbm')
         display.plot()  
-        plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r', label='Chance', alpha=.8)
+        plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='k', label='Chance', alpha=.8)
         plt.title("ROC all predictions")
         plt.legend()
         if self.save :
@@ -656,7 +664,7 @@ class evaluation :
         plt.bar(x_pos, y)
         plt.ylabel("Count")
         plt.title("{} Predictions made since {}".format(len(record_all), start.strftime("%d/%m/%Y")))
-        plt.xticks(x_pos, x, rotation = 45)
+        plt.xticks(x_pos, x, rotation = 45, fontsize=8)
         
         if self.save :
             plt.savefig('./Images/History predicted.png')
@@ -678,7 +686,7 @@ class evaluation :
         plt.bar(x_pos, y)
         plt.ylabel("Count")
         plt.title("{} Trades completed since {}".format(len(record_traded), start.strftime("%d/%m/%Y")))
-        plt.xticks(x_pos, x, rotation = 45)
+        plt.xticks(x_pos, x, rotation = 45, fontsize=8)
         
         if self.save :
             plt.savefig('./Images/History traded.png')

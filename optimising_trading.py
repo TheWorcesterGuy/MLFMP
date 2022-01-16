@@ -78,6 +78,7 @@ def f_acc(p = 0.6, l = 60, probability = True, acc_level = False, plots = False,
     
     
     acc = acc[:-1]
+    true_acc = acc
     test = acc
     days = days[:-1]
     delta = delta[:-1]
@@ -87,6 +88,13 @@ def f_acc(p = 0.6, l = 60, probability = True, acc_level = False, plots = False,
     acc = parameters[2]+parameters[0]*np.exp(parameters[1]*level)
     
     if plots :
+        plt.figure()
+        plt.plot(level, true_acc, '*', label = "True Accuracy")
+        plt.plot(level, acc, 'o', label = "Accuracy from regression")
+        plt.xlabel('Probability level')
+        plt.ylabel('Accuracy')
+        plt.legend(loc='upper left')
+        
         plt.figure()
         fig,ax = plt.subplots()
         ax.plot(level, acc ,color="blue", label = 'accuracy')
@@ -123,7 +131,7 @@ def f_acc(p = 0.6, l = 60, probability = True, acc_level = False, plots = False,
     if verbose :
         print('\nUsing probability threshold of %a\n' %p_level)
         print('\nAverage number of trades per day at this level %a\n' %d_level)
-        print('\nAccuracy at probability level %a\n' %acc_p)
+        print('\nAccuracy at probability level %a\n' %np.round(acc_p,2))
     
     if probability :
         return np.round(acc_p/50,3)
