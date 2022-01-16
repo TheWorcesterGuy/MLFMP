@@ -32,12 +32,12 @@ warnings.simplefilter(action = 'ignore')
 def main():
     print('\n Evaluating recorded models \n')
 
-    evaluation().charts()
+    #evaluation().charts()
     #evaluation(True, False).variable()
     #evaluation().money()
     #evaluation().account()
-    #evaluation().models_quality()
-    evaluation().models_quality_trade()
+    evaluation().models_quality()
+    #evaluation().models_quality_trade()
     #evaluation().results_traded()
     #evaluation().results_predicted()
     #evaluation().history()
@@ -100,7 +100,7 @@ class evaluation :
             print('mean_test', np.round(np.mean(accuracy_test),2))
             print('mean_live', np.round(np.mean(accuracy_live),2))
         
-        plt.title('Mean live accuracy over test accuracy threshold (normalised by days traded)', fontsize=14)
+        plt.title('Mean live accuracy over test accuracy threshold (normalised by days traded)', fontsize=10)
         plt.xlabel('Test accuracy threshold', fontsize=8)
         plt.ylabel('Mean live accuracy above threshold (normalised by days traded)', fontsize=8)
         plt.plot(accuracy_test, mean_live_thr, 'o')
@@ -111,7 +111,7 @@ class evaluation :
         else :
             plt.show()
         
-        plt.title('Mean live accuracy over test ROC threshold', fontsize=14)
+        plt.title('Mean live accuracy over test ROC threshold', fontsize=10)
         plt.xlabel('Test ROC threshold', fontsize=8)
         plt.ylabel('Mean live accuracy above threshold (normalised by days traded)', fontsize=8)
         plt.plot(ROC_test, mean_live_ROC_thr, 'o')
@@ -128,7 +128,7 @@ class evaluation :
         # plt.plot(accuracy_test, std_live_thr, 'o')
         # plt.show()
         
-        plt.title('Trading results over test accuracy threshold (normalised by days traded)', fontsize=14)
+        plt.title('Trading results over test accuracy threshold (normalised by days traded)', fontsize=10)
         plt.xlabel('Test accuracy threshold', fontsize=8)
         plt.ylabel('Live results over threshold (normalised by days traded)', fontsize=8)
         plt.plot(accuracy_test, mean_live_perf, 'o')
@@ -139,7 +139,7 @@ class evaluation :
         else :
             plt.show()
         
-        plt.title('Trading results over test ROC threshold (normalised by days traded)', fontsize=14)
+        plt.title('Trading results over test ROC threshold (normalised by days traded)', fontsize=10)
         plt.xlabel('Test ROC threshold', fontsize=8)
         plt.ylabel('Live results over threshold (normalised by days traded)', fontsize=8)
         plt.plot(ROC_test, mean_live_ROC_perf, 'o')

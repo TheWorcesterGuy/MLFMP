@@ -44,7 +44,7 @@ class market :
         self.price_data = pd.read_csv('./data/features_store.csv',',')
         self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.95))
         self.CPU_high_counter = 0
-        self.threads = 6
+        self.threads = 10
         
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
         if (nyc_datetime.weekday() not in [5,6]) :
