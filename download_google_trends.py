@@ -24,7 +24,7 @@ def main():
     n_days = 14
 
     # Check if Google Trend update is allowed
-    #check_update_validity()
+    check_update_validity()
 
     google_trends = ['INTC', 'TSLA', 'AMZN', 'FB', 'AAPL', 'DIS', 'SPY', 'QQQ', 'GOOG', 'GOOGL', 'MSFT', 'NFLX', 'NVDA',
         	  'TWTR', 'AMD', 'WMT', 'JPM', 'BAC', 'PG', 'VIX', 'debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'stock risk',
