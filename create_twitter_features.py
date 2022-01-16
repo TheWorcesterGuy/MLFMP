@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import datetime
-
 import yfinance as yf
 from yahoofinancials import YahooFinancials
 import pandas as pd
@@ -20,29 +19,58 @@ stock = sys.argv[1]
 def main():
 
     print('Creating Twitter features for %s...' % stock)
-    # load yahoo stock prices
-    df_stock = yf.download(stock, start='2016-01-01', end='3000-12-31', progress=False).reset_index(drop=False)[['Date', 'Close', 'Open']]
+
+    # LOAD PRICE DATA
+    df_stock = yf.download(stock, start='2016-01-01', end='3000-12-31', progress=False).reset_index(drop=False)[['Date', 'Open', 'Close']]
     df_stock['Date'] = pd.to_datetime(df_stock['Date'], errors='coerce')
 
-    # load Twitter data
+    # LOAD TWITTER DATA
     list_files = [pd.read_csv(file, lineterminator='\n')[['Datetime', 'number_cashtag', 'nbFollowers',
                                                           'compound', 'LM_score']] for file in
                   glob.glob("data/TWITTER_DATA/%s/encoded_data/*encoded*.csv" % stock)]
     df = pd.concat(list_files, axis=0)
 
-    # convert UTC time to NY time and save tweets after 8:35 NY time for next day
+    # CONVERT TO NY TIME AND SHIFT TIME (8:35 NEW MIDNIGHT)
     df = fix_tweet_timing(df, df_stock)
 
-    # aggregate tweets
+    # AGGREGATE TWEETS DAILY
     df = aggregate_tweets(df)
 
-    # add stock market prices
+    # REMOVE WEEKENDS AND PUBLIC HOLIDAY
+
+    # The aggregated data on monday must be the one of saturday (weekend tweets are irrelevant - same when holiday)
+
+    # add opening of stock markets
+    df = df.merge(df_stock[['Date', 'Open']], on='Date', how='outer')
+
+    # create shift stock variables
+    shift_cols = []
+    for k in range(1, 20):
+        df['stock_shift_%s' % k] = df['Open'].shift(k)
+        shift_cols.append('stock_shift_%s' % k)
+
+    for col in [c for c in df.columns if ('Date' not in c and 'stock' not in c and 'Open' not in c)]:
+        shift_var_cols = []
+        for k in range(1, 20):
+            df['var_shift_%s' % k] = df[col].shift(k)
+            shift_var_cols.append('var_shift_%s' % k)
+
+        df[col] = df.apply(lambda row: correct_post_off_days_data(row, col, df['Date'].min()), axis=1)
+        df = df.drop(shift_var_cols, axis=1)
+    df = df.drop(shift_cols, axis=1)
+
+    # Drop weekends / public hoidays (when no opening of stock market)
+    df = df[(df['Open'].notna()) | (df['Date'] == df['Date'].max())]
+    df = df.drop(['Open'], axis=1)
+
+
+    # ADD STOCK MARKET PRICE
     df = df.merge(df_stock, on='Date', how='outer')
     
-    # create stock market name column
+    # CREATE STOCK NAME OLUMN
     df['stock'] = stock
 
-    # create derived features
+    # CREATE DERIVED FEATURES AND CLASS
     df = df.sort_values('Date')
     df = create_derived_features(df)
 
@@ -63,6 +91,28 @@ def main():
 
     df.to_csv('./data/%s_features_twitter.csv' % stock, index=False)
 
+
+
+
+def correct_post_off_days_data(row, col, min_date):
+
+    # first days have nans stock values (will be dropped in the end)
+    if row['Date'] <= min_date + pd.DateOffset(days=10):
+        return row[col]
+
+    if np.isnan(row['stock_shift_1']) == False:
+        return row[col]
+
+    else:
+        max_depth = 10
+        depth = 1
+        while np.isnan(row['stock_shift_%s' % depth]) == True:
+            depth = depth + 1
+
+            if depth >= max_depth:
+                raise ValueError('More than %s days in a row had NaN stock prices' % max_depth) 
+
+        return row['var_shift_%s' % (depth - 1)] #  depth - 1 because we want last row before it's no longer nan
 
 def compute_vader_sent(df):
     Mpos = df['compound'][df['compound'] > 0.1].count() * (df['nbFollowers'][df['compound'] > 0.1].count()) ** 0.5
@@ -109,24 +159,10 @@ def fix_tweet_timing(df, df_stock):
     df['Datetime'] = pd.to_datetime(df['Datetime'])
     df['Datetime'] = df['Datetime'].dt.tz_convert(eastern)
 
-    # drop days of tweet if no stock except if last day
-    df['Date'] = pd.to_datetime(df['Datetime'].dt.date)
-    df = df.merge(df_stock, on='Date', how='left')
-    df = df[(df['Open'].notna()) | (df['Date'] == df['Date'].max())]
-    df = df.drop(['Date', 'Close', 'Open'], axis=1)
-
     # tweets after 8:35 am NY time are saved for next day which means we shift forward by 15 hours and 25 minutes
-    df['Datetime'] = df['Datetime'] + pd.DateOffset(hours=15, minutes=25)
-
-    # tweets that fall on saturday must be redirected for monday > adding 48 hours to the tweets on saturday
-    df['dayweek'] = df['Datetime'].dt.dayofweek
-    df.loc[df['dayweek'] == 5, 'Datetime'] += pd.DateOffset(hours=48, minutes=5)
-    
-    # remove tweets that are on sunday
-    df['dayweek'] = df['Datetime'].dt.dayofweek
-    df = df[df['dayweek'] < 5]
-    df['Date'] = pd.to_datetime(df['Datetime'].dt.date, errors='coerce')
-    df = df.drop(['dayweek'], axis=1)
+    df['Datetime'] = df['Datetime'] + pd.Timedelta(hours=15, minutes=25) 
+    df['Date'] = df['Datetime'].dt.date
+    df = df.drop('Datetime', axis=1)
 
     return df
 
@@ -202,10 +238,7 @@ def create_derived_features(df):
         df[feature + 'lag6'] = (df[feature].shift(6) + df[feature].shift(7)) / 2
         df[feature + 'lag8'] = (df[feature].shift(8) + df[feature].shift(9)) / 2
         df[feature + 'lag10'] = (df[feature].shift(10) + df[feature].shift(11)) / 2
-        #df[feature + 'lag12'] = (df[feature].shift(12) + df[feature].shift(13)) / 2
-        #df[feature + 'lag14'] = (df[feature].shift(14) + df[feature].shift(14)) / 2
-        #df[feature + 'lag20'] = (df[feature].shift(15) + df[feature].shift(16) + df[feature].shift(17) + df[feature].shift(18) + df[feature].shift(19) + df[feature].shift(20)) / 6
-        
+
         df[feature + 'delta1'] = df[feature + 'lag1'] / df[feature]
         df[feature + 'delta2'] = df[feature + 'lag2'] / df[feature]
         df[feature + 'delta3'] = df[feature + 'lag3'] / df[feature]
@@ -213,13 +246,9 @@ def create_derived_features(df):
         df[feature + 'delta6'] = df[feature + 'lag6'] / df[feature]
         df[feature + 'delta8'] = df[feature + 'lag8'] / df[feature]
         df[feature + 'delta10'] = df[feature + 'lag10'] / df[feature]
-        #df[feature + 'delta12'] = df[feature + 'lag12'] / df[feature]
-        #df[feature + 'delta14'] = df[feature + 'lag14'] / df[feature]
-        #df[feature + 'delta20'] = df[feature + 'lag20'] / df[feature]
         
         df[feature + 'delta_mean3'] = df[[feature + 'delta1', feature + 'delta2', feature + 'delta3']].mean(axis=1) / 3
         df[feature + 'delta_mean6'] = df[[feature + 'delta4', feature + 'delta6']].mean(axis=1) / 3
-        #df[feature + 'delta_mean12'] = df[[feature + 'delta6', feature + 'delta8', feature + 'delta10', feature + 'delta12']].mean(axis=1) / 5
         
         df[feature + 'dev_delta21'] = (df[feature + 'delta1'] / df[feature + 'delta2'])
         df[feature + 'dev_delta31'] = (df[feature + 'delta1'] / df[feature + 'delta3'])
@@ -242,7 +271,6 @@ def create_derived_features(df):
             df[feature + 'mean_3'] = (df[feature + 'lag1'] + df[feature + 'lag2'] + df[feature + 'lag3']) / 3
             df[feature + 'mean_6'] = (df[feature + 'lag1'] + df[feature + 'lag2'] + df[feature + 'lag3']
                                               + df[feature + 'lag4'] + df[feature + 'lag6']) / 6
-            #df[feature + 'mean_12'] = (df[feature + 'lag8'] + df[feature + 'lag10'] + df[feature + 'lag12']) / 6
 
         if 'nb_tweet' in feature:
   
@@ -253,9 +281,6 @@ def create_derived_features(df):
             del df[feature + 'lag6']
             del df[feature + 'lag8']
             del df[feature + 'lag10']
-            #del df[feature + 'lag12']
-            #del df[feature + 'lag14']
-            #del df[feature + 'lag20']
 
     df['delta_stock1'] = (df['Close'].shift(1) - df['Open'].shift(1)) / df['Open'].shift(1)
     df['delta_stock2'] = (df['Close'].shift(2) - df['Open'].shift(2)) / df['Open'].shift(2)
