@@ -74,7 +74,7 @@ class market :
         self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.95))
         self.all = glob.glob(os.getcwd() + '/models/*.{}'.format('csv'))
         self.CPU_high_counter = 0
-        self.threads = 6
+        self.threads = 10
        
     def stock_matrix(self) :
         self.mode = 10
@@ -161,7 +161,7 @@ class market :
         if self.mode == 1 :
             shaps = np.round(np.logspace(-3.5,-1,num=20),4)
             leaves = np.round(np.linspace(5,1000,30),0)
-            depth = np.round(np.linspace(2,20,10),0)       
+            depth = np.round(np.linspace(2,15,10),0)       
             rate = np.round(np.logspace(-2.5,-0.5,num=20),4)         
             bins = np.round(np.linspace(100,900,30),0)   
             is_unbalance = [0, 1]
@@ -268,25 +268,35 @@ class market :
         send_report()
 
     def selector(self):
+        def length(x):
+            return len(eval(x))
         
         try :
             record = pd.read_csv('./data/record_model.csv')
-            record = record.drop_duplicates(subset=['model_name'], keep='last')
             record['date'] = pd.to_datetime(record['date'])
+            record = record.drop_duplicates(subset=['model_name'], keep='last')
+            record['length'] = record['used'].apply(length)
+            record_ = record[record['length']==len(self.use)]
+            record__ = record_[record_['stock'] == self.predict]
+            if len(record__)>10 :
+                record = record__
+            elif len(record_)>10 :
+                record = record_
+                
             # today = datetime.now()
             # recent = today - timedelta(days=5)
             # record = record[record['date'] > recent].dropna()
                 
-            percentage_days = 10
-            record = record[record['days_traded_test'] > int(150*percentage_days/100)]
-            record = record[record['days_traded_live'] > int(100*percentage_days/100)]
+            # percentage_days = 10
+            # record = record[record['days_traded_test'] > int(150*percentage_days/100)]
+            # record = record[record['days_traded_live'] > int(100*percentage_days/100)]
             
             models = record['model_name'].tolist()
             accuracy_test = np.array(record['trade_accuracy_test'].to_list())#[:-5]
             accuracy_live = np.array(record['trade_accuracy_live'].to_list())
             ROC_live = np.array(record['ROC_live'].to_list())#[:-5]
             ROC_test = np.array(record['ROC_test'].to_list())
-            metric = (ROC_live + ROC_test + accuracy_test + accuracy_live)/4
+            metric = list(record['trade_accuracy_test'] * np.log10(record['days_traded_test']))
             
             parameters = record.parameters.to_list()
             shaps = [float(model.split('-')[-1]) for model in models]
@@ -299,9 +309,9 @@ class market :
             df = pd.DataFrame({'shaps' : shaps, 'num_leaves' : num_leaves, 'max_depth': max_depth, 
                                'learning_rate' :learning_rate, 'bins': bins,
                                'is_unbalance': is_unbalance, 'metric': metric})
-            
+            df = df[df['shaps']>0]
             best = df.groupby(['shaps','num_leaves', 'max_depth','learning_rate','bins','is_unbalance']).mean().sort_values(['metric'],ascending=False).index[0]
-            
+                
             ml_parameters = pd.DataFrame()
             ml_parameters['shaps'] = [best[0]]
             ml_parameters['num_leaves'] = [best[1]]
@@ -361,8 +371,8 @@ class market :
             print('\nModel creation mode : %d\n' %self.mode)
             self.predict = random.sample(self.possibilities, 1)[0]
             self.use_n = random.randint(1, 5)
-            self.selector()
             self.use_stocks()
+            self.selector()
             self.prep()
             self.make_model()
         
