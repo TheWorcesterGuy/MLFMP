@@ -42,7 +42,7 @@ def main():
 
     # add opening of stock markets
     df = df.merge(df_stock[['Date', 'Open']], on='Date', how='outer')
-    df = df.sort_values('Date', ascending=False)
+    df = df.sort_values('Date')
 
 
     # create shift stock variables
