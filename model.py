@@ -161,7 +161,7 @@ class market :
         if self.mode == 1 :
             shaps = np.round(np.logspace(-3.5,-1,num=20),4)
             leaves = np.round(np.linspace(5,1000,30),0)
-            depth = np.round(np.linspace(2,15,10),0)       
+            depth = np.round(np.linspace(2,10,10),0)       
             rate = np.round(np.logspace(-2.5,-0.5,num=20),4)         
             bins = np.round(np.linspace(100,900,30),0)   
             is_unbalance = [0, 1]
@@ -292,9 +292,9 @@ class market :
             # record = record[record['days_traded_live'] > int(100*percentage_days/100)]
             
             models = record['model_name'].tolist()
-            accuracy_test = np.array(record['trade_accuracy_test'].to_list())#[:-5]
+            accuracy_test = np.array(record['trade_accuracy_test'].to_list())
             accuracy_live = np.array(record['trade_accuracy_live'].to_list())
-            ROC_live = np.array(record['ROC_live'].to_list())#[:-5]
+            ROC_live = np.array(record['ROC_live'].to_list())
             ROC_test = np.array(record['ROC_test'].to_list())
             metric = list(record['trade_accuracy_test'] * np.log10(record['days_traded_test']))
             
@@ -321,6 +321,7 @@ class market :
             ml_parameters['is_unbalance'] = [best[5]]
                 
         except:
+            print('\nFailed to extract parameters from model record - Using preset parameters\n')
             ml_parameters = pd.DataFrame()
             ml_parameters['shaps'] = [0.02]
             ml_parameters['num_leaves'] = [400]
@@ -332,8 +333,9 @@ class market :
         ml_parameters.to_csv('./data/parameters.csv', index=False)
         
     def execute(self) :
-        
-        for k in range (0,20):
+        time_m = 0
+        number_of_models = 50
+        for k in range (0,number_of_models):
             
             nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
             if (nyc_datetime.weekday() not in [5,6]) :
@@ -365,18 +367,26 @@ class market :
                     self.threads = 1
                 if (self.CPU_high_counter>15) :
                     print('\nCPU temperature is holding too high, sleeping 5 minutes\n')
-                    time.sleep(60*5)  
+                    time.sleep(60*5)
             
             self.mode = random.randint(1,5)
+            #self.mode = 1
             print('\nModel creation mode : %d\n' %self.mode)
             self.predict = random.sample(self.possibilities, 1)[0]
             self.use_n = random.randint(1, 5)
             self.use_stocks()
             self.selector()
+            start_m = datetime.now()
             self.prep()
             self.make_model()
+            stop_m = datetime.now()
+            time_m += (stop_m - start_m).seconds
+            
+        t_n = round(time_m/number_of_models,2)
+        print('\n{} seconds needed for {} models, {} seconds per model\n'.format(time_m, number_of_models, t_n))
+        df = pd.DataFrame({'date': [datetime.now().strftime('%d-%m-%y')], 'n_models': [number_of_models], 'time' : [time_m], 't_n' : [t_n]})
+        df.to_csv('./log/model_making/time.csv')
         
-
 if __name__ == "__main__":
     main()
 
