@@ -75,7 +75,6 @@ def main():
     df = merge_files(stocks)
     df = df.set_index(['Date', 'stock'])
     df.to_csv('./data/features_store.csv')
-    print(df)
     print('features store updated')
 
 
@@ -86,7 +85,8 @@ def main():
     print('\n Time to update trade features: ', (stop_trade - stop_google_trends))
     print('\n Time to update twitter features: ', (stop - stop_trade))
     print('\n Time to update features: ', (stop - start))
-    print('\nLast row added:', df.head(1))
+    df = df.reset_index(drop=False)
+    print('\nLast rows added:', df[df['Date'] == df['Date'].max()])
     
     
     update_end_date = pd.Timestamp.today().strftime('%Y-%m-%d %H:%M')
