@@ -117,7 +117,7 @@ def trade_system():
             
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))   
         if (nyc_datetime.date() in us_holidays) :
-            next_day = (nyc_datetime + timedelta(days=1)).replace(hour=0, minute=0, second=1,microsecond=0)
+            next_day = (nyc_datetime + timedelta(days=1)).replace(hour=0, minute=0, second=2,microsecond=0)
             difference = next_day - nyc_datetime
             print('\n Bank holiday stoppage, sleeping', round((difference.seconds/60)/60,3), 'hours\n')
             time.sleep(difference.seconds)

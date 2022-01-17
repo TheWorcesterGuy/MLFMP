@@ -27,27 +27,30 @@ import warnings
 import yfinance as yf
 import re
 import ast
+import random
 warnings.simplefilter(action = 'ignore')
 
 def main():
     print('\n Evaluating recorded models \n')
 
     #evaluation().charts()
-    #evaluation(True, False).variable()
-    #evaluation().money()
-    #evaluation().account()
+    #evaluation().variable()
+    # evaluation().money()
+    # evaluation().account()
     evaluation().models_quality()
-    #evaluation().models_quality_trade()
-    #evaluation().results_traded()
-    #evaluation().results_predicted()
-    #evaluation().history()
+    # evaluation().models_quality_trade()
+    # evaluation().results_traded()
+    # evaluation().results_predicted()
+    # evaluation().history()
+    evaluation().model_count()
+    evaluation().parameter_evolution()
     
 class evaluation :
     def __init__(self, save = False, verbose = True):
         self.save = save
         self.verbose = verbose
         record = pd.read_csv('./data/record_model.csv')
-        record = record.drop_duplicates(subset=['model_name'], keep='last')
+        record.drop_duplicates(subset=['model_name', 'parameters'], keep='first')
         record['date'] = pd.to_datetime(record['date'])
         today = datetime.now()
         recent = today - timedelta(days=1)
@@ -152,6 +155,7 @@ class evaluation :
 
     def variable(self):    
         record = pd.read_csv('./data/record_model.csv').dropna()
+        record = record[record['stock'] == 'QQQ']
         record['date'] = pd.to_datetime(record['date'])
         if type(self.start) != int :
             record = record[record['date'] > self.start]
@@ -693,8 +697,64 @@ class evaluation :
             plt.close()
         else :
             plt.show()
+            
+    def model_count(self):
+        record = pd.read_csv('./data/record_model.csv')
+        record['date'] = pd.to_datetime(record['date'])
+        record = record.drop_duplicates(subset=['model_name', 'parameters'], keep='first')
+        if type(self.start) != int :
+            record = record[record['date'] > self.start]
+        record['metric'] = (record['accuracy_live'] + record['accuracy_test'])/2
+        n_day = record.groupby(['date']).count()['model_name']
+        n_pass = record[record['metric']>=60].groupby(['date']).count()['model_name']
+        ratio = round(100*n_pass/n_day,2).reset_index()
+        plt.plot(ratio['date'],ratio['model_name'],'k')
+        plt.xticks(rotation=45, fontsize=8)
+        plt.title("Percent of models with accuracy '(live+test)/2' above 60% since {} (retests not counted)".format(self.start.strftime("%d/%m/%Y")))
+        plt.xlabel('Date')
+        plt.ylabel('(Models above 60%)/(total number of models) (in %)')
+        if self.save :
+            plt.savefig('./Images/model count.png')
+            plt.close()
+        else :
+            plt.show()
+            
+    def parameter_evolution(self):
+        start = self.start
+        #start = datetime(2021, 10, 1, 0, 0, 0, 0)
+        record = pd.read_csv('./data/record_model.csv').dropna()
+        record['date'] = pd.to_datetime(record['date'])
+        if type(start) != int :
+            record = record[record['date'] > start]
+        parameter = random.choice(['shaps', 'leaves', 'depth', 'rate', 'bins', 'balance'])
+        plt.figure()
+        stocks = list(set(record['stock']))
+        for stock in random.sample(stocks,5) :
+            record_ = record[record['stock'] == stock]
                 
+            parameters = record_.parameters.to_list()
+            models = record_['model_name'].tolist()
+            date = record_.date.to_list()
+            shaps = [float(model.split('-')[-1]) for model in models]
+            leaves = [int(eval(x)[0][1]) for x in parameters]
+            depth = [int(eval(x)[2][1]) for x in parameters]
+            rate = [eval(x)[3][1] for x in parameters]
+            bins = [int(eval(x)[4][1]) for x in parameters]
+            balance = [int(eval(x)[7][1]) for x in parameters]
+            
+            df = pd.DataFrame({'date':date,'shaps':shaps,'leaves':leaves,'depth':depth,'rate':rate,'bins':bins,'balance':balance})
+            df['date'] = pd.to_datetime(df['date'])
+            df = df.groupby('date').std().reset_index()
+    
+            plt.plot(df['date'],df[parameter],label=stock)
+            plt.xticks(rotation=45, fontsize=8)
+            plt.title("Evolution of std of {}".format(parameter))
+            plt.xlabel('Date')
+            plt.ylabel(str(parameter))
+            plt.legend()
         
+        plt.show()
         
+                  
 if __name__ == "__main__":
     main()
