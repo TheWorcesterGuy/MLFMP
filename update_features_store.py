@@ -70,9 +70,9 @@ def main():
     apply_parallel_command(6, "./encode_tweets.py", stocks)
     apply_parallel_command(3, "./create_twitter_features.py", stocks)
     
-
     # merge the two sources of features
     df = merge_files(stocks)
+    df = df.sort_values('Date', ascending=False)
     df = df.set_index(['Date', 'stock'])
     df.to_csv('./data/features_store.csv')
     print('features store updated')

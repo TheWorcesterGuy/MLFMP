@@ -23,32 +23,31 @@ for stock in stocks:
     df_twitter_stock['stock'] = stock
     df_twitter_stock = df_twitter_stock[['Date', 'source', 'stock']]
 
-    # check google stock features
-    # try:
-    #     df_google_stock = pd.read_csv('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (stock, stock))
-    #     df_google_stock = df_google_stock[df_google_stock['Date'] == df_google_stock['Date'].max()]
-    #     df_google_stock['source'] = 'google_stock'
-    #     df_google_stock['stock'] = stock
-    #     df_google_stock = df_google_stock[['Date', 'source', 'stock']]
-    # except:
-    #     df_google_stock = pd.DataFrame([[np.nan, 'google stock', stock]], columns=['Date', 'source', 'stock'])
+    #check google stock features
+    try:
+        df_google_stock = pd.read_csv('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (stock, stock))
+        df_google_stock = df_google_stock[df_google_stock['Date'] == df_google_stock['Date'].max()]
+        df_google_stock['source'] = 'google_stock'
+        df_google_stock['stock'] = stock
+        df_google_stock = df_google_stock[['Date', 'source', 'stock']]
+    except:
+        df_google_stock = pd.DataFrame([[np.nan, 'google stock', stock]], columns=['Date', 'source', 'stock'])
  
 
-    # check google mood features
-    # moods = ['debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk',
-    #                      'investing.com']
-    # min_date = '3000-12-31'
-    # for mood in moods:
-    #     df_google_mood = pd.read_csv('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (mood, mood))
-    #     df_google_mood = df_google_mood[df_google_mood['Date'] == df_google_mood['Date'].max()]
-    #     if df_google_mood['Date'].iloc[0] < min_date:
-    #         min_date = df_google_mood['Date'].iloc[0]
-    #         df_google_mood = df_google_mood
+    #check google mood features
+    moods = ['debt', 'bloomberg', 'yahoo finance', 'buy stocks', 'sell stocks', 'VIX', 'stock risk',
+                         'investing.com', 'bullish_bearish']
+    min_date = '3000-12-31'
+    for mood in moods:
+        df_google_mood = pd.read_csv('./data/GOOGLE_TRENDS/%s/encoded_data/%s_features_google.csv' % (mood, mood))
+        df_google_mood = df_google_mood[df_google_mood['Date'] == df_google_mood['Date'].max()]
+        if df_google_mood['Date'].iloc[0] < min_date:
+            min_date = df_google_mood['Date'].iloc[0]
+            df_google_mood = df_google_mood
 
-    # df_google_mood['source'] = 'google_mood'
-    # df_google_mood['stock'] = stock
-    # df_google_mood = df_google_mood[['Date', 'source', 'stock']]
-
+    df_google_mood['source'] = 'google_mood'
+    df_google_mood['stock'] = stock
+    df_google_mood = df_google_mood[['Date', 'source', 'stock']]
 
     # check price features
     df_price_stock = pd.read_csv('./data/%s_features_trading.csv' % stock)
