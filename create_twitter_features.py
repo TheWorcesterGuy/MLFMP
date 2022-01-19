@@ -62,7 +62,7 @@ def main():
     df = df.drop(shift_cols, axis=1)
 
     # Drop weekends / public hoidays (when no opening of stock market)
-    df = df[(df['Open'].notna()) | (df['Date'] == df['Date'].max())]
+    df = df[(df['Open'].notna()) | (df['Date'] == pd.Timestamp.today().strftime('%Y-%m-%d'))]
     df = df.drop(['Open'], axis=1)
 
 
