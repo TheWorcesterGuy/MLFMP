@@ -711,7 +711,7 @@ class evaluation :
         ratio = round(100*n_pass/n_day,2).reset_index()
         plt.plot(ratio['date'],ratio['model_name'],'k')
         plt.xticks(rotation=45, fontsize=8)
-        plt.title("Percent of models with accuracy '(live+test)/2' above 60% since {} (retests not counted)".format(self.start.strftime("%d/%m/%Y")))
+        plt.title("Percent of models with accuracy '(live+test)/2' above 60% since {} (retests counted)".format(self.start.strftime("%d/%m/%Y")))
         plt.xlabel('Date')
         plt.ylabel('(Models above 60%)/(total number of models) (in %)')
         if self.save :
