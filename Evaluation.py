@@ -33,7 +33,7 @@ warnings.simplefilter(action = 'ignore')
 def main():
     print('\n Evaluating recorded models \n')
 
-    #evaluation().charts()
+    evaluation().charts()
     #evaluation().variable()
     # evaluation().money()
     # evaluation().account()
@@ -44,13 +44,14 @@ def main():
     # evaluation().history()
     evaluation().model_count()
     evaluation().parameter_evolution()
+    #evaluation().annualized_gain()
     
 class evaluation :
     def __init__(self, save = False, verbose = True):
         self.save = save
         self.verbose = verbose
         record = pd.read_csv('./data/record_model.csv')
-        record.drop_duplicates(subset=['model_name', 'parameters'], keep='first')
+        #record.drop_duplicates(subset=['model_name', 'parameters'], keep='first')
         record['date'] = pd.to_datetime(record['date'])
         today = datetime.now()
         recent = today - timedelta(days=1)
@@ -302,7 +303,7 @@ class evaluation :
         
     def models_quality(self):
         record = pd.read_csv('./data/record_model.csv').dropna()
-        record = record.drop_duplicates(subset=['model_name'], keep='first')
+        #record = record.drop_duplicates(subset=['model_name','parameters'], keep='first')
         record = record.groupby(['date']).mean().reset_index()
         record['date'] = pd.to_datetime(record['date']) 
         if type(self.start) != int :
@@ -701,7 +702,7 @@ class evaluation :
     def model_count(self):
         record = pd.read_csv('./data/record_model.csv')
         record['date'] = pd.to_datetime(record['date'])
-        record = record.drop_duplicates(subset=['model_name', 'parameters'], keep='first')
+        #record = record.drop_duplicates(subset=['model_name', 'parameters'], keep='first')
         if type(self.start) != int :
             record = record[record['date'] > self.start]
         record['metric'] = (record['accuracy_live'] + record['accuracy_test'])/2
@@ -720,9 +721,16 @@ class evaluation :
             plt.show()
             
     def parameter_evolution(self):
+        
+        def length(x):
+            return len(eval(x))
         start = self.start
         #start = datetime(2021, 10, 1, 0, 0, 0, 0)
         record = pd.read_csv('./data/record_model.csv').dropna()
+        #record = record.drop_duplicates(subset=['model_name', 'parameters'], keep='first')
+        record['length'] = record['used'].apply(length)
+        length = random.randint(1,4)
+        record = record[record['length']==length]
         record['date'] = pd.to_datetime(record['date'])
         if type(start) != int :
             record = record[record['date'] > start]
@@ -748,12 +756,48 @@ class evaluation :
     
             plt.plot(df['date'],df[parameter],label=stock)
             plt.xticks(rotation=45, fontsize=8)
-            plt.title("Evolution of std of {}".format(parameter))
+            plt.title("Evolution of std of {} at train length of {}".format(parameter, length))
             plt.xlabel('Date')
             plt.ylabel(str(parameter))
             plt.legend()
         
         plt.show()
+        
+    def annualized_gain(self):
+            
+        account = pd.read_csv('./data/account.csv').dropna()
+        account['date'] = pd.to_datetime(account['Date'])
+        if type(self.start) != int :
+            account = account[account['date'] > self.start]
+        
+        temp = []
+        for i in range(1, len(account['Change_account_%'])+1) :
+            temp.append(np.mean(account['Change_account_%'].iloc[:i]))
+            temp[-1] = np.round(((1+temp[-1]/100)**253 - 1) * 100,2)
+            
+        account['annual'] = temp
+        plt.figure()
+        plt.plot(account['Date'],account['annual'],'k', label='Daily annualized gain')
+        plt.xticks(rotation='vertical')
+        plt.xlabel('Date')
+        plt.ylabel('Annualised gain (%)')
+        plt.legend()
+        plt.xticks(rotation=45, fontsize=8)
+        gain = (account['PM'].iloc[-1] - account['AM'].iloc[0])/account['AM'].iloc[0]
+        gain_per_day = 100*gain/len(account)
+        annualised_gain = np.round(((1+gain_per_day/100)**253 - 1) * 100,2)
+        gain = round(gain*100,2)
+        plt.title("Compacted annualised gain since {}\n Annualised gain taking into account variations before and including given date\n Lastest annualized gain {} %"\
+                  .format(self.start.strftime("%d/%m/%Y"), annualised_gain))
+        
+        if self.save :
+            plt.savefig('./Images/annualized gain.png')
+            plt.close()
+        else :
+            plt.show()
+        
+        if self.verbose :
+            print('Gain/Loss percent on account %a' %gain)
         
                   
 if __name__ == "__main__":

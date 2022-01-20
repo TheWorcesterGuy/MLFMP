@@ -46,7 +46,7 @@ def main():
         # Send update email once a day
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
         start = nyc_datetime.replace(hour=16, minute=0, second=0,microsecond=0)
-        end = nyc_datetime.replace(hour=17, minute=0, second=0,microsecond=0)
+        end = nyc_datetime.replace(hour=17, minute=45, second=0,microsecond=0)
         if (nyc_datetime > start) & (nyc_datetime < end) & (nyc_datetime.date() > date_sent.date()) :
             print('\nSending email update on model quality\n')
             os.system('rm ./data/stock_links.csv')

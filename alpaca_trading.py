@@ -101,7 +101,7 @@ def distribution(api, buying_power) :
         Contains the final trading data, note this data is also exported to '.csv' for email updates
     """
     account = api.get_account()
-    reduced_power = (float(account.buying_power)/2)
+    reduced_power = (float(account.buying_power)/4)
     reduced_power = reduced_power - reduced_power*0.01
     print('The trading power today is: %a $' %reduced_power)
     df = pd.read_csv('./data/to_trade.csv')
