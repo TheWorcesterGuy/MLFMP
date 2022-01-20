@@ -35,7 +35,7 @@ warnings.simplefilter(action = 'ignore')
 plt.rcParams["figure.figsize"] = 10, 5
 
 def main() :
-    f_acc(p = 0.6, l= 60, probability = True, acc_level = False, plots = False, verbose = False)
+    f_acc(p = 0.8, l= 60, probability = True, acc_level = False, plots = True, verbose = True)
 
     
 def f_acc(p = 0.6, l = 60, probability = True, acc_level = False, plots = False, verbose = False):
@@ -43,8 +43,12 @@ def f_acc(p = 0.6, l = 60, probability = True, acc_level = False, plots = False,
     all_p = pd.read_csv('./data/record_all_predictions.csv')
     all_p['Date'] = pd.to_datetime(all_p['Date'])
     today = datetime.now()
-    start = datetime(2022, 1, 9, 0, 0, 0, 0)
+    start = datetime(2021, 1, 9, 0, 0, 0, 0)
     all_p = all_p[all_p['Date'] > start]
+    
+    # today = datetime.now()
+    # recent = today - timedelta(days=1)
+    # all_p = all_p[all_p['Date'] <= recent].dropna()
     
     if verbose :
         print('\n\nAll accuracy is : %a perc'% np.round(accuracy_score(all_p['Prediction'], all_p['Outcome'], normalize = True) * 100,2))
@@ -76,20 +80,32 @@ def f_acc(p = 0.6, l = 60, probability = True, acc_level = False, plots = False,
         y = C + A*np.exp(B*x)
         return y
     
-    
     acc = acc[:-1]
-    true_acc = acc
-    test = acc
+    level = level[:len(acc)]
     days = days[:-1]
     delta = delta[:-1]
-    level = level[:len(acc)]
-    parameters, covariance = curve_fit(Exp, level, acc)
+    true_level = level
+    true_acc = acc
     
-    acc = parameters[2]+parameters[0]*np.exp(parameters[1]*level)
+    try :
+        parameters, covariance = curve_fit(Exp, level, acc)
+        level = np.linspace(0.5,max(level),100)
+        acc = parameters[2]+parameters[0]*np.exp(parameters[1]*level)
+    except :
+        print('\nExponential fit failed, trying linear interpolation\n')
+        acc = np.maximum.accumulate(acc)
+        df = pd.DataFrame({'l': true_level, 'a' : acc, 'd' : days, 'de': delta}).drop_duplicates(['a'], keep='last')
+        acc = np.array(df['a'])
+        true_level = np.array(df['l'])
+        days = np.array(df['d'])
+        delta = np.array(df['de'])
+        true_acc = acc
+        inter = interp1d(true_level, acc, fill_value="extrapolate")
+        acc = inter(level)
     
     if plots :
         plt.figure()
-        plt.plot(level, true_acc, '*', label = "True Accuracy")
+        plt.plot(true_level, true_acc, '*', label = "True Accuracy")
         plt.plot(level, acc, 'o', label = "Accuracy from regression")
         plt.xlabel('Probability level')
         plt.ylabel('Accuracy')
@@ -102,7 +118,7 @@ def f_acc(p = 0.6, l = 60, probability = True, acc_level = False, plots = False,
         ax.set_xlabel('Probability level',fontsize=14)
         ax.set_ylabel('accuracy',color="blue",fontsize=14) 
         ax2=ax.twinx()
-        ax2.plot(level, days,color="red", label = 'Trades per day')
+        ax2.plot(true_level, days,color="red", label = 'Trades per day')
         ax2.set_ylabel('Trades per day',color="red",fontsize=14)
         plt.legend(loc='upper left')
         #plt.savefig('./Images/trades per day per level.png')
@@ -116,14 +132,14 @@ def f_acc(p = 0.6, l = 60, probability = True, acc_level = False, plots = False,
         ax.set_xlabel('Probability level',fontsize=14)
         ax.set_ylabel('accuracy',color="blue",fontsize=14) 
         ax2=ax.twinx()
-        ax2.plot(level, delta ,color="red", label = 'Return')
+        ax2.plot(true_level, delta ,color="red", label = 'Return')
         ax2.set_ylabel('Average daily delta',color="red",fontsize=14)
         plt.legend(loc='upper left')
         #plt.savefig('./Images/average return per level.png')
         plt.show()
     
     p_level = level[np.where(np.array(acc)>l)[0][0]]
-    d_level = days[np.where(np.array(acc)>l)[0][0]]
+    d_level = days[np.where(np.array(true_acc)>l)[0][0]]
     if p < 0.5 :
         p = 1-p
     acc_p = acc[np.where(np.array(level)>p)[0][0]]
@@ -132,6 +148,14 @@ def f_acc(p = 0.6, l = 60, probability = True, acc_level = False, plots = False,
         print('\nUsing probability threshold of %a\n' %p_level)
         print('\nAverage number of trades per day at this level %a\n' %d_level)
         print('\nAccuracy at probability level %a\n' %np.round(acc_p,2))
+    
+    if p_level < 0.55 :
+        print('\nFound probability level to low ({}), raising it to 0.6'.format(p_level))
+        p_level = 0.6
+        
+    if p_level > 0.7 :
+        print('\nFound probability level to high ({}), lowering it to 0.6'.format(p_level))
+        p_level = 0.6
     
     if probability :
         return np.round(acc_p/50,3)
