@@ -138,8 +138,14 @@ def f_acc(p = 0.6, l = 60, probability = True, acc_level = False, plots = False,
         #plt.savefig('./Images/average return per level.png')
         plt.show()
     
-    p_level = level[np.where(np.array(acc)>l)[0][0]]
-    d_level = days[np.where(np.array(true_acc)>l)[0][0]]
+    try :
+        p_level = level[np.where(np.array(acc)>l)[0][0]]
+        d_level = days[np.where(np.array(true_acc)>l)[0][0]]
+    except :
+        p_level = 0.6
+        print('\nFailed to find level, data incompatable setting probability level to {}'.format(p_level))
+        d_level = False
+        
     if p < 0.5 :
         p = 1-p
     acc_p = acc[np.where(np.array(level)>p)[0][0]]
