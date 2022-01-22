@@ -197,6 +197,8 @@ class trade :
             df['K%'] = df['Probability'] - (1-df['Probability'])/(df['rate'])
             df['K%'] = df['K%']/np.abs(df['K%'].sum())
             
+        df.drop(df[(df['Probability'] < 0.6) & (df['Probability'] > 0.4)].index, inplace = True)
+            
         df['Probability'] = Probability
         df = df.round(4)
         df['K%'][df['K%']>0.30] = 0.30
