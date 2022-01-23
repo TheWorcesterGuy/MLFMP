@@ -274,7 +274,7 @@ class market :
         try :
             record = pd.read_csv('./data/record_model.csv')
             record['date'] = pd.to_datetime(record['date'])
-            record = record.drop_duplicates(subset=['model_name'], keep='last')
+            #record = record.drop_duplicates(subset=['model_name'], keep='last')
             record['length'] = record['used'].apply(length)
             record_ = record[record['length']==len(self.use)]
             record__ = record_[record_['stock'] == self.predict]
@@ -287,16 +287,16 @@ class market :
             # recent = today - timedelta(days=5)
             # record = record[record['date'] > recent].dropna()
                 
-            # percentage_days = 10
-            # record = record[record['days_traded_test'] > int(150*percentage_days/100)]
-            # record = record[record['days_traded_live'] > int(100*percentage_days/100)]
+            percentage_days = 10
+            record = record[record['days_traded_test'] > int(150*percentage_days/100)]
+            record = record[record['days_traded_live'] > int(100*percentage_days/100)]
             
             models = record['model_name'].tolist()
             accuracy_test = np.array(record['trade_accuracy_test'].to_list())
             accuracy_live = np.array(record['trade_accuracy_live'].to_list())
             ROC_live = np.array(record['ROC_live'].to_list())
             ROC_test = np.array(record['ROC_test'].to_list())
-            metric = list(record['trade_accuracy_test'] * np.log10(record['days_traded_test']))
+            metric = list((record['trade_accuracy_test'] + record['ROC_test'])/2)
             
             parameters = record.parameters.to_list()
             shaps = [float(model.split('-')[-1]) for model in models]
@@ -365,7 +365,7 @@ class market :
                 else :
                     print('\nCPU temperature too high, at minimum thread level\n')
                     self.threads = 1
-                if (self.CPU_high_counter>15) :
+                if (self.CPU_high_counter>25) :
                     print('\nCPU temperature is holding too high, sleeping 5 minutes\n')
                     time.sleep(60*5)
             

@@ -35,14 +35,14 @@ def main():
 
     evaluation().charts()
     #evaluation().variable()
-    # evaluation().money()
+    #evaluation().money()
     # evaluation().account()
     evaluation().models_quality()
-    # evaluation().models_quality_trade()
-    # evaluation().results_traded()
-    # evaluation().results_predicted()
+    #evaluation().models_quality_trade()
+    #evaluation().results_traded()
+    #evaluation().results_predicted()
     # evaluation().history()
-    evaluation().model_count()
+    #evaluation().model_count()
     evaluation().parameter_evolution()
     #evaluation().annualized_gain()
     
@@ -73,6 +73,8 @@ class evaluation :
         percentage_days = percentage_days/100
         record = record[record['days_traded_test'] > int(150*percentage_days)]
         record = record[record['days_traded_live'] > int(100*percentage_days)]
+        
+        print('\n{} models today\n'.format(record.count().date))
         
         #normalise by number of days traded 
         record['trade_accuracy_live'] = record['trade_accuracy_live']
@@ -244,32 +246,12 @@ class evaluation :
         plt.figure()
         df = df.groupby(['accuracy_live']).mean().reset_index()
         plt.plot(np.array(df['accuracy_live']),np.array(df['model_performance_live']),'o')
+        plt.axhline(y=1,color='k',linestyle='--',label='Theoretical gain limit')
+        plt.axvline(x=50,color='r',linestyle='--',label='No predictif power limit')
+        plt.title('Link between accuracy and performance')
         plt.xlabel('Live accuracy')
         plt.ylabel('Performance')
-        plt.show()
-        
-        df = pd.read_csv('./data/record_model.csv')
-        df['date'] = pd.to_datetime(df['date'])
-        today = datetime.now()
-        recent = today - timedelta(days=2)
-        df = df[df['date'] > recent]
-        plt.figure()
-        df = df.groupby(['ROC_live']).mean().reset_index()
-        plt.plot(np.array(df['ROC_live']),np.array(df['model_performance_live']),'o')
-        plt.xlabel('Live ROC')
-        plt.ylabel('Performance')
-        plt.show()
-        
-        df = pd.read_csv('./data/record_model.csv')
-        df['date'] = pd.to_datetime(df['date'])
-        today = datetime.now()
-        recent = today - timedelta(days=2)
-        df = df[df['date'] > recent]
-        plt.figure()
-        df = df.groupby(['ROC_live']).mean().reset_index()
-        plt.plot((np.array(df['ROC_live'])+np.array(df['accuracy_live']))/2,np.array(df['model_performance_live']),'o')
-        plt.xlabel('metric')
-        plt.ylabel('Performance')
+        plt.legend()
         plt.show()
         
     def account (self) :
@@ -737,7 +719,7 @@ class evaluation :
         parameter = random.choice(['shaps', 'leaves', 'depth', 'rate', 'bins', 'balance'])
         plt.figure()
         stocks = list(set(record['stock']))
-        for stock in random.sample(stocks,5) :
+        for stock in stocks :
             record_ = record[record['stock'] == stock]
                 
             parameters = record_.parameters.to_list()
