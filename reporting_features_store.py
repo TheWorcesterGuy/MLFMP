@@ -126,7 +126,10 @@ for google_trend in google_trends_dir:
     last_file = None
     files = glob.glob('./data/GOOGLE_TRENDS/%s/*.csv' % google_trend)
     for file in files:
-        if str(datetime.today().month) in file and str(datetime.today().year) in file:
+        file_name = file.split('/')[-1]
+        year_file = file_name.split('_')[-2]
+        month_file = file_name.split('_')[-1].split('.')[0]
+        if str(datetime.today().year) == year_file and str(datetime.today().month) == month_file:
             last_file = file
 
     df_last_google = pd.read_csv(last_file)
