@@ -23,7 +23,7 @@ warnings.simplefilter(action = 'ignore')
 def main():
     print('\nIn Alpaca Trading\n')
     nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-    api, buying_power, account_value = login()
+    api, buying_power = login()
     print('\nLogin test --- Completed\n')
     trade = pd.read_csv('./data/to_trade.csv')
     trade_data, trade_value = distribution(api, buying_power)
@@ -37,7 +37,7 @@ def main():
     print('\nSleeping before market close : %a hours\n'%round((difference.seconds/60)/60,2))
     time.sleep(difference.seconds)
     print('\nClosing trades\n')
-    close_trades(api, account_value, trade_value)
+    close_trades(api, trade_value)
     print('\nTrades closed\n')
             
 
@@ -90,7 +90,7 @@ def login() :
     account_value.to_csv('./data/account_value.csv', index = False)
     print('${} is available as buying power.'.format(account.buying_power))
     
-    return api, float(account.buying_power), account_value
+    return api, float(account.buying_power)
 
 def distribution(api, buying_power) :
     """Class function used to distribute a reduced buying power between stocks based on probabilities and number of predictions'
@@ -196,7 +196,7 @@ def open_trade(api, trade_data) :
     print('Todays orders sent are :')
     print(orders)
 
-def close_trades(api, account_value, trade_value):
+def close_trades(api, trade_value):
     """Function used to close trades and orders, trades and orders are closed in a loop'
         WARNING : It is essential that this functions is run if trades have been opened, otherwise losses can occure.
     """

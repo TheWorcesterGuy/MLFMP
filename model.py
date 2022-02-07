@@ -36,7 +36,7 @@ warnings.filterwarnings("ignore")
 
 def main():
     #os.system("python3 update_features_store.py")
-    #market().stock_matrix()
+    market().stock_matrix()
     os.system("python3 model_evaluate.py")
     nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
     date_sent = nyc_datetime - pd.Timedelta("1 days")
@@ -58,7 +58,7 @@ def main():
         # Create stock links matrix on the Weekend
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
         start = nyc_datetime.replace(hour=1, minute=0, second=1,microsecond=0)
-        end = nyc_datetime.replace(hour=1, minute=30, second=0,microsecond=0)
+        end = nyc_datetime.replace(hour=2, minute=30, second=0,microsecond=0)
         if (nyc_datetime > start) & (nyc_datetime < end) & (nyc_datetime.weekday() == 6):
             market().stock_matrix()
         
@@ -85,6 +85,7 @@ class market :
                 self.predict = stock_a
                 self.use = [stock_a, stock_b]
                 self.use = list(set(self.use))
+                self.selector()
                 self.prep()
                 self.make_model()
         os.system("python model_evaluate.py")

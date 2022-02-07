@@ -8,6 +8,8 @@ Created on Wed Nov 17 20:41:56 2021
 
 import time
 from datetime import datetime, timedelta
+import alpaca_trade_api as tradeapi
+from alpaca_trade_api.rest import TimeFrame
 import glob
 import os
 import sys
@@ -136,6 +138,7 @@ def get_price(ticker, start_date):
         time.sleep(1)
 
     return temp
+
 
 
 if __name__ == "__main__":

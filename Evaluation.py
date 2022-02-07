@@ -36,15 +36,16 @@ def main():
     evaluation().charts()
     #evaluation().variable()
     #evaluation().money()
-    # evaluation().account()
-    evaluation().models_quality()
+    #evaluation().account()
+    #evaluation().models_quality()
     #evaluation().models_quality_trade()
     #evaluation().results_traded()
     #evaluation().results_predicted()
-    # evaluation().history()
+    #evaluation().history()
     #evaluation().model_count()
-    evaluation().parameter_evolution()
+    #evaluation().parameter_evolution()
     #evaluation().annualized_gain()
+    #evaluation().prediction_control()
     
 class evaluation :
     def __init__(self, save = False, verbose = True):
@@ -331,6 +332,7 @@ class evaluation :
         plt.title("Quality of predictions and trades since {}".format(self.start.strftime("%d/%m/%Y")))
         plt.xlabel('Date')
         plt.ylabel('Accuracy')
+        plt.axhline(y=50, color='k', linestyle='-',label='Coin flip accuracy')
         plt.legend()
         if self.save :
             plt.savefig('./Images/trade_quality.png')
@@ -638,20 +640,26 @@ class evaluation :
             record_all = record_all[record_all['Date']>start]
             record_traded = record_traded[record_traded['Date']>start]
         
-        all_pred = []
+        df_right = record_all[record_all['Prediction'] == record_all['Outcome']]
+        right = []
         for p in possibilities :
-            all_pred.append(len(record_all[record_all['Traded']==p]))
+            right.append(len(df_right[df_right['Traded']==p]))
             
-        x = possibilities
-        y = all_pred
+        df_wrong = record_all[record_all['Prediction'] != record_all['Outcome']]
+        wrong = []
+        for p in possibilities :
+            wrong.append(len(df_wrong[df_wrong['Traded']==p]))
         
-        x_pos = [i for i, _ in enumerate(y)]
+        accuracy = np.round(100*sum(right)/(sum(right)+sum(wrong)),2)
+        x_pos = [i for i, _ in enumerate(right)]
         
         plt.figure()
-        plt.bar(x_pos, y)
+        plt.bar(x_pos, right, label='right')
+        plt.bar(x_pos, wrong, bottom=right, label='wrong')
         plt.ylabel("Count")
-        plt.title("{} Predictions made since {}".format(len(record_all), start.strftime("%d/%m/%Y")))
-        plt.xticks(x_pos, x, rotation = 45, fontsize=8)
+        plt.title("{} Predictions made since {}\nAccuracy is {}%".format(len(record_all), start.strftime("%d/%m/%Y"),accuracy))
+        plt.xticks(x_pos, possibilities, rotation = 45, fontsize=8)
+        plt.legend()
         
         if self.save :
             plt.savefig('./Images/History predicted.png')
@@ -660,20 +668,26 @@ class evaluation :
             plt.show()
         
 
-        traded = []
+        df_right = record_traded[record_traded['Prediction'] == record_traded['Outcome']]
+        right = []
         for p in possibilities :
-            traded.append(len(record_traded[record_traded['Traded']==p]))
+            right.append(len(df_right[df_right['Traded']==p]))
             
-        x = possibilities
-        y = traded
+        df_wrong = record_traded[record_traded['Prediction'] != record_traded['Outcome']]
+        wrong = []
+        for p in possibilities :
+            wrong.append(len(df_wrong[df_wrong['Traded']==p]))
         
-        x_pos = [i for i, _ in enumerate(y)]
+        accuracy = np.round(100*sum(right)/(sum(right)+sum(wrong)),2)
+        x_pos = [i for i, _ in enumerate(right)]
         
         plt.figure()
-        plt.bar(x_pos, y)
+        plt.bar(x_pos, right, label='right')
+        plt.bar(x_pos, wrong, bottom=right, label='wrong')
         plt.ylabel("Count")
-        plt.title("{} Trades completed since {}".format(len(record_traded), start.strftime("%d/%m/%Y")))
-        plt.xticks(x_pos, x, rotation = 45, fontsize=8)
+        plt.title("{} Trades completed since {}\nAccuracy is {}%".format(len(record_traded), start.strftime("%d/%m/%Y"),accuracy))
+        plt.xticks(x_pos, possibilities, rotation = 45, fontsize=8)
+        plt.legend()
         
         if self.save :
             plt.savefig('./Images/History traded.png')
@@ -741,7 +755,7 @@ class evaluation :
             plt.title("Evolution of std of {} at train length of {}".format(parameter, length))
             plt.xlabel('Date')
             plt.ylabel(str(parameter))
-            plt.legend()
+            plt.legend(loc=(1.04,0))
         
         plt.show()
         
@@ -763,6 +777,7 @@ class evaluation :
         plt.xticks(rotation='vertical')
         plt.xlabel('Date')
         plt.ylabel('Annualised gain (%)')
+        plt.axhline(y=0, color='r', linestyle='-',label='Break even')
         plt.legend()
         plt.xticks(rotation=45, fontsize=8)
         gain = (account['PM'].iloc[-1] - account['AM'].iloc[0])/account['AM'].iloc[0]
@@ -771,7 +786,6 @@ class evaluation :
         gain = round(gain*100,2)
         plt.title("Compacted annualised gain since {}\n Annualised gain taking into account variations before and including given date\n Lastest annualized gain {} %"\
                   .format(self.start.strftime("%d/%m/%Y"), annualised_gain))
-        
         if self.save :
             plt.savefig('./Images/annualized gain.png')
             plt.close()
@@ -781,6 +795,48 @@ class evaluation :
         if self.verbose :
             print('Gain/Loss percent on account %a' %gain)
         
+    def prediction_control (self):
+        def gain(changes):
+            value = [100000]
+            for ch in changes:
+                value.append(value[-1]*(1+ch/100))
+            return value[1:]
+    
+        account = pd.read_csv('./data/account.csv').dropna()
+        preds = pd.read_csv('./data/record_all_predictions.csv')
+        account['Date'] = pd.to_datetime(account['Date'])
+        preds['Date'] = pd.to_datetime(preds['Date'])
+        if type(self.start) != int :
+            account = account[account['Date'] > self.start]
+            preds  = preds[preds['Date'] > self.start]
+        account['outcome'] = account['Change_account_%']
+        account.loc[account['outcome']>0,'outcome'] = 1
+        account.loc[account['outcome']<=0,'outcome'] = -1
+        accuracy = 100*(account[account['outcome']>0].count()/account['outcome'].count()).outcome
+        print('\nAccount variation accuracy is {}%'.format(np.round(accuracy,3)))
+        account = account.set_index(['Date'])
+        account = account.join(preds.groupby(['Date']).sum().abs()['Prediction']/preds.groupby(['Date']).count()['Prediction'], how='inner')
+        account = account.reset_index()
+        
+        levels = np.linspace(0,1,200)
+        result = []
+        level = []
+        for i in levels :
+            test2 = account[account['Prediction']<i]
+            if len(test2)>0 :
+                result.append(100*(gain(test2['Change_account_%'])[-1]-100000)/100000)
+                level.append(i)
+        plt.figure()  
+        plt.plot(level,result,label='Account variation at given value of direction level')
+        plt.xlabel('Direction level')
+        plt.ylabel('Account variation %')
+        plt.title ('Maximum found for {}'.format(np.round(level[np.argmax(result)],3)))
+        plt.legend()
+        if self.save :
+            plt.savefig('./Images/Prediction direction.png')
+            plt.close()
+        else :
+            plt.show()
                   
 if __name__ == "__main__":
     main()

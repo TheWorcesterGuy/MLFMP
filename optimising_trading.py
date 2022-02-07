@@ -35,7 +35,7 @@ warnings.simplefilter(action = 'ignore')
 plt.rcParams["figure.figsize"] = 10, 5
 
 def main() :
-    f_acc(p = 0.8, l= 60, probability = True, acc_level = False, plots = True, verbose = True)
+    f_acc(p = 0.6, l= 60, probability = True, acc_level = False, plots = True, verbose = True)
 
     
 def f_acc(p = 0.6, l = 60, probability = True, acc_level = False, plots = False, verbose = False):
@@ -43,7 +43,7 @@ def f_acc(p = 0.6, l = 60, probability = True, acc_level = False, plots = False,
     all_p = pd.read_csv('./data/record_all_predictions.csv')
     all_p['Date'] = pd.to_datetime(all_p['Date'])
     today = datetime.now()
-    start = datetime(2021, 1, 9, 0, 0, 0, 0)
+    start = datetime(2022, 1, 21, 0, 0, 0, 0)
     all_p = all_p[all_p['Date'] > start]
     
     # today = datetime.now()
@@ -57,7 +57,7 @@ def f_acc(p = 0.6, l = 60, probability = True, acc_level = False, plots = False,
     df['Prob'] = df['Probability']
     df['Prob'].mask(df['Prob'] < 0.5, 1-df['Prob'], inplace=True)
     
-    level =  np.round(np.linspace(0.5,1,num=50),3)
+    level =  np.round(np.linspace(0.5,1,num=1000),3)
     
     acc = []
     days = []
@@ -80,33 +80,32 @@ def f_acc(p = 0.6, l = 60, probability = True, acc_level = False, plots = False,
         y = C + A*np.exp(B*x)
         return y
     
-    acc = acc[:-1]
+    def squ(x, A, B, C, D,E):
+        y = A + B*x + C*x**2 + D*x**3 + E*x**4
+        return y
+    
+    acc = np.maximum.accumulate(acc[:-1])
     level = level[:len(acc)]
     days = days[:-1]
-    delta = delta[:-1]
+    delta = np.maximum.accumulate(delta[:-1])
     true_level = level
     true_acc = acc
+    df = pd.DataFrame({'level': level,'acc' : np.maximum.accumulate(acc), 'days':days, 'delta': delta})
     
     try :
         parameters, covariance = curve_fit(Exp, level, acc)
-        level = np.linspace(0.5,max(level),100)
-        acc = parameters[2]+parameters[0]*np.exp(parameters[1]*level)
+        level = np.linspace(0.5,max(level),1000)
+        acc = parameters[2]+parameters[0]*np.exp(parameters[1]*level)   
     except :
-        print('\nExponential fit failed, trying linear interpolation\n')
-        acc = np.maximum.accumulate(acc)
-        df = pd.DataFrame({'l': true_level, 'a' : acc, 'd' : days, 'de': delta}).drop_duplicates(['a'], keep='last')
-        acc = np.array(df['a'])
-        true_level = np.array(df['l'])
-        days = np.array(df['d'])
-        delta = np.array(df['de'])
-        true_acc = acc
-        inter = interp1d(true_level, acc, fill_value="extrapolate")
+        print('\nExponential fit failed, trying interpolation\n')
+        inter = interp1d(level, acc, fill_value="extrapolate",kind='linear')
+        level = np.linspace(0.5,max(level),1000)
         acc = inter(level)
     
     if plots :
         plt.figure()
-        plt.plot(true_level, true_acc, '*', label = "True Accuracy")
         plt.plot(level, acc, 'o', label = "Accuracy from regression")
+        plt.plot(true_level, true_acc, '*', label = "True Accuracy")
         plt.xlabel('Probability level')
         plt.ylabel('Accuracy')
         plt.legend(loc='upper left')
@@ -151,7 +150,7 @@ def f_acc(p = 0.6, l = 60, probability = True, acc_level = False, plots = False,
     acc_p = acc[np.where(np.array(level)>p)[0][0]]
     
     if verbose :
-        print('\nUsing probability threshold of %a\n' %p_level)
+        print('\nUsing probability threshold of %a\n' %np.round(p_level,2))
         print('\nAverage number of trades per day at this level %a\n' %d_level)
         print('\nAccuracy at probability level %a\n' %np.round(acc_p,2))
     
