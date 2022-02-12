@@ -33,12 +33,12 @@ warnings.simplefilter(action = 'ignore')
 def main():
     print('\n Evaluating recorded models \n')
 
-    evaluation().charts()
+    #evaluation().charts()
     #evaluation().variable()
     #evaluation().money()
     #evaluation().account()
     #evaluation().models_quality()
-    #evaluation().models_quality_trade()
+    evaluation().models_quality_trade()
     #evaluation().results_traded()
     #evaluation().results_predicted()
     #evaluation().history()
@@ -315,19 +315,33 @@ class evaluation :
         record['status'] = record['Prediction']*record['Outcome']
         record['status'][record['status']<0] = 0
         record = record.groupby(['Date']).mean().reset_index()
+        print('\nMean daily traded accuracy is {}'.format(np.round(100*np.mean(record['status']),2)))
         
         plt.figure()
         plt.plot(record['Date'],record['status']*100,'b', label='Daily accuracy traded')
         
-        record = pd.read_csv('./data/record_all_predictions.csv').dropna()
-        record['Date'] = pd.to_datetime(record['Date']) 
+        df = pd.read_csv('./data/record_all_predictions.csv').dropna()
+        df['Date'] = pd.to_datetime(df['Date']) 
         if type(self.start) != int :
-            record = record[record['Date'] > self.start]
-        record['status'] = record['Prediction']*record['Outcome']
-        record['status'][record['status']<0] = 0
-        record = record.groupby(['Date']).mean().reset_index()
-
+            df = df[df['Date'] > self.start]
+        df['status'] = df['Prediction']*df['Outcome']
+        df['status'][df['status']<0] = 0
+        record = df.groupby(['Date']).mean().reset_index()
+        print('\nMean daily accuracy of all predictions is {}'.format(np.round(100*np.mean(record['status']),2)))
+        
         plt.plot(record['Date'],record['status']*100,'r', label='Daily accuracy all')
+        
+        df = df.groupby(['Date','Traded']).sum().reset_index()
+        df['Outcome'][df['Outcome']>0] = 1
+        df['Outcome'][df['Outcome']<=0] = -1
+        df['Prediction'][df['Prediction']>0] = 1
+        df['Prediction'][df['Prediction']<=0] = -1
+        df['status'] = df['Prediction']*df['Outcome']
+        df['status'][df['status']<0] = 0
+        record = df.groupby(['Date']).mean().reset_index()
+        print('\nMean daily tradable accuracy of all predictions is {}'.format(np.round(100*np.mean(record['status']),2)))
+        
+        plt.plot(record['Date'],record['status']*100,'g', label='Daily accuracy all tradable')
         plt.xticks(rotation=45, fontsize=8)
         plt.title("Quality of predictions and trades since {}".format(self.start.strftime("%d/%m/%Y")))
         plt.xlabel('Date')

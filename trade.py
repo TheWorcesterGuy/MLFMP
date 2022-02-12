@@ -51,8 +51,8 @@ class trade :
         self.price_data = pd.read_csv('./data/features_store.csv')
         self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.95))
         self.flag_error = 0
+        self.DC_factor = 1
         self.path = os.getcwd()
-        self.start = datetime(2022, 1, 9, 0, 0, 0, 0)
         data = pd.DataFrame({'Date' : [], 'Products' : [], 
                     'Probabilities': [], 'Model_level_p': [], 'Model_level_n': [],'Model_performance': []}) 
         data.to_csv('./data/trade_data.csv', index = False)
@@ -202,7 +202,7 @@ class trade :
             
         df['Probability'] = Probability
         df = df.round(4)
-        df['K%'][df['K%']>0.30] = 0.30
+        df['K%'][df['K%']>0.15] = 0.15
         df['K%'][df['K%']<0.001] = np.nan
         df = df.reset_index().rename({'index': 'Products'}, axis=1)
         df = df.dropna()
@@ -222,18 +222,15 @@ class trade :
             return 0.7, 0.3
         
     def direction_control(self):
-        def gain(changes):
+        def gain(changes,factor):
             value = [100000]
-            for ch in changes:
-                value.append(value[-1]*(1+ch/100))
+            for ch, fa in zip(changes,factor):
+                value.append(value[-1]*(1+ch*(1/fa)/100))
             return value[1:]
         preds = pd.read_csv('./data/record_all_predictions.csv')
         account = pd.read_csv('./data/account.csv').dropna()
         account['Date'] = pd.to_datetime(account['Date'])
         preds['Date'] = pd.to_datetime(preds['Date'])
-        if type(self.start) != int :
-            account = account[account['Date'] > self.start]
-            preds  = preds[preds['Date'] > self.start]
         account['outcome'] = account['Change_account_%']
         account.loc[account['outcome']>0,'outcome'] = 1
         account.loc[account['outcome']<=0,'outcome'] = -1
@@ -241,28 +238,35 @@ class trade :
         account = account.join(preds.groupby(['Date']).sum().abs()['Prediction']/preds.groupby(['Date']).count()['Prediction'], how='inner')
         account = account.reset_index()
         
-        levels = np.linspace(0,1,200)
+        levels = np.linspace(0,1,50)
         result = []
         level = []
         for i in levels :
             test2 = account[account['Prediction']<i]
             if len(test2)>0 :
-                result.append(100*(gain(test2['Change_account_%'])[-1]-100000)/100000)
+                result.append(100*(gain(test2['Change_account_%'],test2['Trade_factor'])[-1]-100000)/100000)
                 level.append(i)
          
         direction_level = np.round(level[np.argmax(result)],3)
-        print('\nDirection level to be used is {}\n'.format(direction_level))
+        print('\nDirection level to be used is {}\n'.format(np.round(direction_level,3)))
         data = pd.read_csv('./data/trade_data.csv')
         data['Direction_control'] = data['Probabilities']
         data.loc[data['Direction_control']>0.5,'Direction_control'] = 1
         data.loc[data['Direction_control']<=0.5,'Direction_control'] = -1
         direction = (data.groupby(['Date']).sum().abs()['Direction_control']/data.groupby(['Date']).count()['Direction_control']).iloc[0]        
         
+        # if direction > direction_level :
+        #     df = pd.read_csv('./data/to_trade.csv')
+        #     df['temp'] = (df['Probability']-0.5).abs()
+        #     unique_trade = df.sort_values(['temp'], ascending = False).Products.iloc[0]
+        #     df = df[df['Products'] == unique_trade]
+        #     del df['temp']
+        #     df.to_csv('./data/to_trade.csv', index = False)
+        
         if direction > direction_level :
+            self.DC_factor = 0.1
             df = pd.read_csv('./data/to_trade.csv')
-            df['Probability'] = (df['Probability']-0.5).abs()
-            unique_trade = df.sort_values(['Probability'], ascending = False).Products.iloc[0]
-            df = df[df['Products'] == unique_trade]
+            df['K%'] = df['K%']*self.DC_factor
             df.to_csv('./data/to_trade.csv', index = False)
             
     def trade_data(self) :
@@ -460,6 +464,7 @@ class trade :
         if np.size(pd.read_csv('./data/to_trade.csv'))>0 :
             account = pd.read_csv('./data/account.csv')
             account_value = pd.read_csv('./data/account_value.csv')
+            account_value['Trade_factor'] = self.DC_factor
             account = account.append(account_value, ignore_index=True)
             account.to_csv('./data/account.csv', index = False)  
             print(account.tail(1))

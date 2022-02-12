@@ -103,9 +103,9 @@ def main():
         df_all = df_all.append(df, ignore_index=True)
         
         outcome = df_all[df_all['Traded'] == stock].sum().outcome
-        outcome = 1*(outcome>1) + -1*(outcome<1)
+        outcome = 1*(outcome>0) + -1*(outcome<=0)
         prediction = df_all[df_all['Traded'] == stock].sum().predictions
-        prediction = 1*(prediction>1) + -1*(prediction<1)
+        prediction = 1*(prediction>0) + -1*(prediction<=0)
         df = pd.DataFrame({'Traded': [stock], 'predictions': prediction,
                     'outcome': outcome}) 
         df_all_sum = df_traded_sum.append(df, ignore_index=True) 
