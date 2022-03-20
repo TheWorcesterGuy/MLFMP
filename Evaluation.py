@@ -34,17 +34,16 @@ def main():
     print('\n Evaluating recorded models \n')
 
     #evaluation().charts()
-    #evaluation().variable()
     #evaluation().money()
-    #evaluation().account()
+    evaluation().account()
     #evaluation().models_quality()
-    evaluation().models_quality_trade()
+    #evaluation().models_quality_trade()
     #evaluation().results_traded()
     #evaluation().results_predicted()
     #evaluation().history()
     #evaluation().model_count()
     #evaluation().parameter_evolution()
-    #evaluation().annualized_gain()
+    evaluation().annualized_gain()
     #evaluation().prediction_control()
     
 class evaluation :
@@ -60,6 +59,9 @@ class evaluation :
         self.record = record.dropna()
         #self.start = datetime(2021, 10, 1, 0, 0, 0, 0)
         self.start = datetime(2022, 1, 9, 0, 0, 0, 0)
+        account = pd.read_csv('./data/account.csv')
+        account['Date'] = pd.to_datetime(account['Date'])
+        self.avoid = account[account['Trade_factor'] != 1]['Date']
         
         if self.verbose :
             print(record.mean())
@@ -156,85 +158,6 @@ class evaluation :
             plt.close()
         else :
             plt.show()
-
-    def variable(self):    
-        record = pd.read_csv('./data/record_model.csv').dropna()
-        record = record[record['stock'] == 'QQQ']
-        record['date'] = pd.to_datetime(record['date'])
-        if type(self.start) != int :
-            record = record[record['date'] > self.start]
-        today = datetime.now()
-        recent = today - timedelta(days=2)
-        record = record[record['date'] > recent]
-        accuracy_test = np.array(record['trade_accuracy_test'].to_list())#[:-5]
-        accuracy_live = np.array(record['trade_accuracy_live'].to_list())
-        ROC_live = np.array(record['ROC_live'].to_list())#[:-5]
-        ROC_test = np.array(record['ROC_test'].to_list())
-        metric = (accuracy_live + accuracy_test)/2
-        models = record['model_name'].to_list()
-        models_len = [len(model.split('-')[1:-1]) for model in models]
-        #metric = accuracy_live
-        
-        plt.figure()
-        models = record['model_name'].tolist()
-        values = [float(x.split('-')[-1]) for x in models]
-        df = pd.DataFrame({'shaps' : values, 'metric': metric})
-        df = df[df['shaps']>0]
-        df = df.groupby(['shaps']).mean().reset_index()
-        plt.plot(np.array(df['shaps']),np.array(df['metric']),'o')
-        plt.xscale('log')
-        plt.xlabel('Shaps level')
-        plt.ylabel('metric')
-        plt.show()
-        
-        plt.figure()
-        df = pd.DataFrame({'length' : models_len, 'metric': metric})
-        df = df.groupby(['length']).mean().reset_index()
-        plt.plot(np.array(df['length']),np.array(df['metric']),'o')
-        plt.xlabel('Model length')
-        plt.ylabel('metric')
-        plt.show
-        
-        plt.figure()
-        parameters = record.parameters.to_list()
-        learning_rate = [eval(x)[3][1] for x in parameters]
-        df = pd.DataFrame({'learning rate' : learning_rate, 'metric': metric})
-        df = df.groupby(['learning rate']).mean().reset_index()
-        plt.plot(np.array(df['learning rate']),np.array(df['metric']),'o')
-        plt.xlabel('learning rate')
-        plt.xscale('log')
-        plt.ylabel('metric')
-        plt.show()
-        
-        plt.figure()
-        parameters = record.parameters.to_list()
-        bins = [eval(x)[4][1] for x in parameters]
-        df = pd.DataFrame({'bins' : bins, 'metric': metric})
-        df = df.groupby(['bins']).mean().reset_index()
-        plt.plot(np.array(df['bins']),np.array(df['metric']),'o')
-        plt.xlabel('bins')
-        plt.ylabel('metric')
-        plt.show()
-        
-        plt.figure()
-        parameters = record.parameters.to_list()
-        leaves = [eval(x)[0][1] for x in parameters]
-        df = pd.DataFrame({'leaves' : leaves, 'metric': metric})
-        df = df.groupby(['leaves']).mean().reset_index()
-        plt.plot(np.array(df['leaves']),np.array(df['metric']),'o')
-        plt.xlabel('leaves')
-        plt.ylabel('metric')
-        plt.show()
-        
-        plt.figure()
-        parameters = record.parameters.to_list()
-        depth = [eval(x)[2][1] for x in parameters]
-        df = pd.DataFrame({'depth' : depth, 'metric': metric})
-        df = df.groupby(['depth']).mean().reset_index()
-        plt.plot(np.array(df['depth']),np.array(df['metric']),'o')
-        plt.xlabel('depth')
-        plt.ylabel('metric')
-        plt.show()
         
     def money(self) :
         
@@ -256,21 +179,37 @@ class evaluation :
         plt.show()
         
     def account (self) :
+        def gain(init,change):
+            first = init
+            for ch in change :
+                init = init*(1+ch/100)
+            return (init/first) - 1
+        
         account = pd.read_csv('./data/account.csv').dropna()
         account['date'] = pd.to_datetime(account['Date'])
         if type(self.start) != int :
             account = account[account['date'] > self.start]
+
         plt.figure()
         plt.plot(account['Date'],account['AM'],'r', label='AM')
         plt.plot(account['Date'],account['PM'],'b', label='PM')
+        for date in self.avoid.iloc[:-1] :
+            plt.axvline(x=date.strftime("%Y - %m - %d"), color='y', linestyle='-')
+        plt.axvline(x=self.avoid.iloc[-1].strftime("%Y - %m - %d"), color='y', linestyle='-',label='Days avoided')
         plt.xticks(rotation='vertical')
         plt.xlabel('Date')
         plt.ylabel('Account value (in $)')
         plt.legend()
         plt.xticks(rotation=45, fontsize=8)
-        gain = (account['PM'].iloc[-1] - account['AM'].iloc[0])/account['AM'].iloc[0]
-        gain_per_day = 100*gain/len(account)
-        annualised_gain = np.round(((1+gain_per_day/100)**253 - 1) * 100,2)
+        
+        n_days_running = len(account) 
+        account = account[~account['date'].isin(self.avoid)]
+        n_days_traded = len(account)
+        r_days_traded = n_days_traded/n_days_running
+        
+        gain = gain(account['AM'].iloc[0],account['Change_account_%'])
+        gain_per_day = 100*gain/n_days_running
+        annualised_gain = np.round(((1+gain_per_day/100)**(253) - 1) * 100,2)
         gain = round(gain*100,2)
         plt.title("Account value since {}\n Change in value of {} % - Average daily change {} %\n Annualized gain of {} %"\
                   .format(self.start.strftime("%d/%m/%Y"), gain, np.round(gain_per_day,2), annualised_gain))
@@ -331,7 +270,7 @@ class evaluation :
         
         plt.plot(record['Date'],record['status']*100,'r', label='Daily accuracy all')
         
-        df = df.groupby(['Date','Traded']).sum().reset_index()
+        df = df.groupby(['Date','Traded']).sum()#.reset_index()
         df['Outcome'][df['Outcome']>0] = 1
         df['Outcome'][df['Outcome']<=0] = -1
         df['Prediction'][df['Prediction']>0] = 1
@@ -347,6 +286,9 @@ class evaluation :
         plt.xlabel('Date')
         plt.ylabel('Accuracy')
         plt.axhline(y=50, color='k', linestyle='-',label='Coin flip accuracy')
+        for date in self.avoid.iloc[:-1] :
+            plt.axvline(x=date, color='y', linestyle='-')
+        plt.axvline(x=self.avoid.iloc[-1], color='y', linestyle='-',label='Days avoided')
         plt.legend()
         if self.save :
             plt.savefig('./Images/trade_quality.png')
@@ -357,8 +299,11 @@ class evaluation :
     def results_traded(self) :
         record = pd.read_csv('./data/record_traded.csv')
         record['Date'] = pd.to_datetime(record['Date'])
+        record['Outcome'] = record['Outcome'].replace(0,random.randint(-1,1))
         if type(self.start) != int :
             record = record[record['Date'] > self.start]
+        record = record[~record['Date'].isin(self.avoid)]
+
         record = record.drop(['Prob_distance'], axis=1)
         
         # Define the traget names
@@ -499,10 +444,13 @@ class evaluation :
     def results_predicted(self) :
         record = pd.read_csv('./data/record_all_predictions.csv')
         record['Date'] = pd.to_datetime(record['Date'])
+        record['Outcome'] = record['Outcome'].replace(0,random.randint(-1,1))
+        print(len(record))
         if type(self.start) != int :
             record = record[record['Date'] > self.start]
         record['Date'] = pd.to_datetime(record['Date'])
-        record.replace('wait', np.nan, inplace=True)
+        record = record[~record['Date'].isin(self.avoid)]
+        print(len(record))
         
         # Define the traget names
         target_names = ['Down Day', 'Up Day']
@@ -654,6 +602,9 @@ class evaluation :
             record_all = record_all[record_all['Date']>start]
             record_traded = record_traded[record_traded['Date']>start]
         
+        record_traded = record_traded[~record_traded ['Date'].isin(self.avoid)]
+        record_all = record_all[~record_all['Date'].isin(self.avoid)]
+        
         df_right = record_all[record_all['Prediction'] == record_all['Outcome']]
         right = []
         for p in possibilities :
@@ -667,10 +618,12 @@ class evaluation :
         accuracy = np.round(100*sum(right)/(sum(right)+sum(wrong)),2)
         x_pos = [i for i, _ in enumerate(right)]
         
+        stock_accuracy = 100*np.array(right)/(np.array(right)+np.array(wrong))
+        
         plt.figure()
-        plt.bar(x_pos, right, label='right')
-        plt.bar(x_pos, wrong, bottom=right, label='wrong')
-        plt.ylabel("Count")
+        plt.bar(x_pos, stock_accuracy, label='stock accuracy')
+        plt.axhline(y=50, color='k', linestyle='-',label='Coin flip accuracy')
+        plt.ylabel("Accuracy")
         plt.title("{} Predictions made since {}\nAccuracy is {}%".format(len(record_all), start.strftime("%d/%m/%Y"),accuracy))
         plt.xticks(x_pos, possibilities, rotation = 45, fontsize=8)
         plt.legend()
@@ -695,10 +648,12 @@ class evaluation :
         accuracy = np.round(100*sum(right)/(sum(right)+sum(wrong)),2)
         x_pos = [i for i, _ in enumerate(right)]
         
+        stock_accuracy = 100*np.array(right)/(np.array(right)+np.array(wrong))
+        
         plt.figure()
-        plt.bar(x_pos, right, label='right')
-        plt.bar(x_pos, wrong, bottom=right, label='wrong')
-        plt.ylabel("Count")
+        plt.bar(x_pos, stock_accuracy, label='stock accuracy')
+        plt.axhline(y=50, color='k', linestyle='-',label='Coin flip accuracy')
+        plt.ylabel("Accuracy")
         plt.title("{} Trades completed since {}\nAccuracy is {}%".format(len(record_traded), start.strftime("%d/%m/%Y"),accuracy))
         plt.xticks(x_pos, possibilities, rotation = 45, fontsize=8)
         plt.legend()
@@ -712,6 +667,7 @@ class evaluation :
     def model_count(self):
         record = pd.read_csv('./data/record_model.csv')
         record['date'] = pd.to_datetime(record['date'])
+        
         #record = record.drop_duplicates(subset=['model_name', 'parameters'], keep='first')
         if type(self.start) != int :
             record = record[record['date'] > self.start]
@@ -777,13 +733,19 @@ class evaluation :
             
         account = pd.read_csv('./data/account.csv').dropna()
         account['date'] = pd.to_datetime(account['Date'])
+        
         if type(self.start) != int :
             account = account[account['date'] > self.start]
-        
+        account['Change_account_%'][account['date'].isin(self.avoid)] = 0
+        n_days = len(account)
+        r_days_traded = (n_days - len(self.avoid))/n_days
+
+        if self.verbose :
+            print('\nAverage percent of trading days traded {}%'.format(np.round(100*r_days_traded,1)))
         temp = []
         for i in range(1, len(account['Change_account_%'])+1) :
-            temp.append(np.mean(account['Change_account_%'].iloc[:i]))
-            temp[-1] = np.round(((1+temp[-1]/100)**253 - 1) * 100,2)
+            average_change = np.sum(account['Change_account_%'].iloc[:i])/i
+            temp.append(np.round(((1+average_change/100)**(253) - 1) * 100,2))
             
         account['annual'] = temp
         plt.figure()
@@ -794,10 +756,7 @@ class evaluation :
         plt.axhline(y=0, color='r', linestyle='-',label='Break even')
         plt.legend()
         plt.xticks(rotation=45, fontsize=8)
-        gain = (account['PM'].iloc[-1] - account['AM'].iloc[0])/account['AM'].iloc[0]
-        gain_per_day = 100*gain/len(account)
-        annualised_gain = np.round(((1+gain_per_day/100)**253 - 1) * 100,2)
-        gain = round(gain*100,2)
+        annualised_gain = account['annual'].iloc[-1]
         plt.title("Compacted annualised gain since {}\n Annualised gain taking into account variations before and including given date\n Lastest annualized gain {} %"\
                   .format(self.start.strftime("%d/%m/%Y"), annualised_gain))
         if self.save :
@@ -806,14 +765,11 @@ class evaluation :
         else :
             plt.show()
         
-        if self.verbose :
-            print('Gain/Loss percent on account %a' %gain)
-        
     def prediction_control (self):
-        def gain(changes):
+        def gain(changes,factor):
             value = [100000]
-            for ch in changes:
-                value.append(value[-1]*(1+ch/100))
+            for ch, fa in zip(changes,factor):
+                value.append(value[-1]*(1+ch*(1/fa)/100))
             return value[1:]
     
         account = pd.read_csv('./data/account.csv').dropna()
@@ -838,7 +794,7 @@ class evaluation :
         for i in levels :
             test2 = account[account['Prediction']<i]
             if len(test2)>0 :
-                result.append(100*(gain(test2['Change_account_%'])[-1]-100000)/100000)
+                result.append(100*(gain(test2['Change_account_%'],test2['Trade_factor'])[-1]-100000)/100000)
                 level.append(i)
         plt.figure()  
         plt.plot(level,result,label='Account variation at given value of direction level')

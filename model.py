@@ -36,8 +36,9 @@ warnings.filterwarnings("ignore")
 
 def main():
     #os.system("python3 update_features_store.py")
+    os.system("python3 model_dev.py")
     market().stock_matrix()
-    os.system("python3 model_evaluate.py")
+    os.system("python3 model_dev.py")
     nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
     date_sent = nyc_datetime - pd.Timedelta("1 days")
     
@@ -46,7 +47,7 @@ def main():
         # Send update email once a day
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
         start = nyc_datetime.replace(hour=16, minute=0, second=0,microsecond=0)
-        end = nyc_datetime.replace(hour=17, minute=45, second=0,microsecond=0)
+        end = nyc_datetime.replace(hour=16, minute=20, second=0,microsecond=0)
         if (nyc_datetime > start) & (nyc_datetime < end) & (nyc_datetime.date() > date_sent.date()) :
             print('\nSending email update on model quality\n')
             os.system('rm ./data/stock_links.csv')
@@ -146,7 +147,7 @@ class market :
         dates = price_data['Date']
         dates = dates.drop_duplicates()
         last_date = dates.iloc[0]
-        first_date = dates.iloc[10] 
+        first_date = dates.iloc[250] 
         price_data = price_data.loc[(price_data['Date'] < last_date)]
         self.price_data_train = price_data[price_data['stock'].isin(use)].loc[(price_data['Date'] < first_date)]
         self.price_data_test = price_data[price_data['stock'] == self.predict].loc[(price_data['Date'] >= first_date)]
@@ -162,7 +163,7 @@ class market :
         if self.mode == 1 :
             shaps = np.round(np.logspace(-3.5,-1,num=20),4)
             leaves = np.round(np.linspace(5,1000,30),0)
-            depth = np.round(np.linspace(2,10,10),0)       
+            depth = np.round(np.linspace(2,8,7),0)       
             rate = np.round(np.logspace(-2.5,-0.5,num=20),4)         
             bins = np.round(np.linspace(100,900,30),0)   
             is_unbalance = [0, 1]
@@ -232,8 +233,8 @@ class market :
         record_features = pd.concat([record_features, df], axis=1)
         record_features.to_csv('./data/model_features.csv', index = False)
         
-        record_features = pd.DataFrame({self.model : str(list(self.parameters.items()))}, index=[0])
-        record_features.to_csv(os.getcwd() + '/models/' + str(self.model) + '.csv', index = False)
+        record_model = pd.DataFrame({self.model : str(list(self.parameters.items()))}, index=[0])
+        record_model.to_csv(os.getcwd() + '/models/' + str(self.model) + '.csv', index = False)
     
     def emails (self) :
         today = datetime.today() - pd.Timedelta("2 days")
@@ -284,9 +285,9 @@ class market :
             elif len(record_)>10 :
                 record = record_
                 
-            # today = datetime.now()
-            # recent = today - timedelta(days=5)
-            # record = record[record['date'] > recent].dropna()
+            today = datetime.now()
+            recent = today - timedelta(days=2)
+            record = record[record['date'] > recent].dropna()
                 
             percentage_days = 10
             record = record[record['days_traded_test'] > int(150*percentage_days/100)]
@@ -297,7 +298,7 @@ class market :
             accuracy_live = np.array(record['trade_accuracy_live'].to_list())
             ROC_live = np.array(record['ROC_live'].to_list())
             ROC_test = np.array(record['ROC_test'].to_list())
-            metric = list((record['trade_accuracy_test'] + record['ROC_test'])/2)
+            metric = list((record['trade_accuracy_test'] + record['ROC_test']+record['trade_accuracy_live'] + record['ROC_live'])/4)
             
             parameters = record.parameters.to_list()
             shaps = [float(model.split('-')[-1]) for model in models]
@@ -335,14 +336,14 @@ class market :
         
     def execute(self) :
         time_m = 0
-        number_of_models = 50
+        number_of_models = 10
         for k in range (0,number_of_models):
             
             nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
             if (nyc_datetime.weekday() not in [5,6]) :
                 #Halt during pre-trading times
                 nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
-                start = nyc_datetime.replace(hour=7, minute=30, second=0,microsecond=0)
+                start = nyc_datetime.replace(hour=7, minute=0, second=0,microsecond=0)
                 end = nyc_datetime.replace(hour=9, minute=30, second=0,microsecond=0)
                 if (nyc_datetime > start) & (nyc_datetime < end) :
                     time.sleep((end-nyc_datetime).seconds)

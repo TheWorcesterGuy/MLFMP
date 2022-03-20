@@ -39,12 +39,16 @@ def main() :
 
     
 def f_acc(p = 0.6, l = 60, probability = True, acc_level = False, plots = False, verbose = False):
-            
+    account = pd.read_csv('./data/account.csv')
+    account['Date'] = pd.to_datetime(account['Date'])
+    avoid = account[account['Trade_factor'] != 1]['Date']
+    
     all_p = pd.read_csv('./data/record_all_predictions.csv')
     all_p['Date'] = pd.to_datetime(all_p['Date'])
     today = datetime.now()
-    start = datetime(2022, 1, 21, 0, 0, 0, 0)
+    start = datetime(2022, 1, 9, 0, 0, 0, 0)
     all_p = all_p[all_p['Date'] > start]
+    all_p = all_p[~all_p['Date'].isin(avoid)]
     
     # today = datetime.now()
     # recent = today - timedelta(days=1)
@@ -66,7 +70,7 @@ def f_acc(p = 0.6, l = 60, probability = True, acc_level = False, plots = False,
         df_ = df[df['Prob']>ll]
         df_ = df_.groupby(by=['Date','Traded']).mean()
         df_['Prediction'][df_['Prediction']>0] = 1
-        df_['Prediction'][df_['Prediction']<0] = -1
+        df_['Prediction'][df_['Prediction']<=0] = -1
         acc.append(np.round(accuracy_score(df_['Prediction'], df_['Outcome'], normalize = True) * 100,2))
         # print('\n\nAccuracy at %a is : %a perc'% (ll,acc[-1]))
         days.append(round(df_.groupby(by=['Date']).count().mean().Prediction,2))
@@ -84,10 +88,12 @@ def f_acc(p = 0.6, l = 60, probability = True, acc_level = False, plots = False,
         y = A + B*x + C*x**2 + D*x**3 + E*x**4
         return y
     
-    acc = np.maximum.accumulate(acc[:-1])
+    acc = acc[:-1]
     level = level[:len(acc)]
-    days = days[:-1]
-    delta = np.maximum.accumulate(delta[:-1])
+    days = days[:len(acc)]
+    delta = delta[:len(acc)]
+    acc = np.maximum.accumulate(acc)
+    delta = np.maximum.accumulate(delta)
     true_level = level
     true_acc = acc
     df = pd.DataFrame({'level': level,'acc' : np.maximum.accumulate(acc), 'days':days, 'delta': delta})
@@ -141,7 +147,7 @@ def f_acc(p = 0.6, l = 60, probability = True, acc_level = False, plots = False,
         p_level = level[np.where(np.array(acc)>l)[0][0]]
         d_level = days[np.where(np.array(true_acc)>l)[0][0]]
     except :
-        p_level = 0.6
+        p_level = 0.64
         print('\nFailed to find level, data incompatable setting probability level to {}'.format(p_level))
         d_level = False
         
@@ -155,12 +161,12 @@ def f_acc(p = 0.6, l = 60, probability = True, acc_level = False, plots = False,
         print('\nAccuracy at probability level %a\n' %np.round(acc_p,2))
     
     if p_level < 0.55 :
-        print('\nFound probability level to low ({}), raising it to 0.6'.format(p_level))
-        p_level = 0.6
+        print('\nFound probability level to low ({}), raising it to 0.64'.format(p_level))
+        p_level = 0.64
         
     if p_level > 0.7 :
-        print('\nFound probability level to high ({}), lowering it to 0.6'.format(p_level))
-        p_level = 0.6
+        print('\nFound probability level to high ({}), lowering it to 0.64'.format(p_level))
+        p_level = 0.64
     
     if probability :
         return np.round(acc_p/50,3)

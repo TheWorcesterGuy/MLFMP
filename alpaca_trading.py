@@ -18,6 +18,7 @@ import numpy as np
 import warnings
 from email_updates_error import *
 import yaml
+import yfinance as yf
 warnings.simplefilter(action = 'ignore')
 
 def main():
@@ -131,7 +132,9 @@ def distribution(api, buying_power) :
     df['K%'] = df['K%']/df['Variability']
     df['Value_to_trade_$'] = (df['K%']*reduced_power)
     df = df.sort_values(by=['Value_to_trade_$'], ascending=False)
+    
     df['Quantity'] = df['Value_to_trade_$']/df['Last_Stock_Value_$']
+    
     
     df['Quantity'][df['Fractionable'] == False] = np.floor(df['Quantity'][df['Fractionable'] == False].tolist())
     df['Quantity'][df['Fractionable'] == True] = np.around(df['Quantity'][df['Fractionable'] == True].tolist(),2)

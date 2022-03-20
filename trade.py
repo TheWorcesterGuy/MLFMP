@@ -26,6 +26,7 @@ from optimising_trading import f_acc
 from scipy.signal import savgol_filter
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
+from prediction_quality import pred_quality
 
 warnings.simplefilter(action = 'ignore')
 
@@ -120,22 +121,22 @@ class trade :
         today = price_data['Date'][price_data['stock']==self.predict].iloc[0] # Extract last date in features store, which sould correspond to todays date                     
         print('\nTodays features date is %s' %today.date())
         
-        if today.date() < (datetime.today()).date():
-            self.flag_error = 1
-            print(self.predict, 'is not up to date, it will be skipped \n')
-        else :
-            self.price_data_train = price_data[price_data['stock'].isin(use)].loc[(price_data['Date'] < today)]    
-            price_data_test = price_data[price_data['stock'] == self.predict].loc[(price_data['Date'] == today)] # Extract data for stock to be predicted
+        #if today.date() < (datetime.today()).date():
+        #    self.flag_error = 1
+        #    print(self.predict, 'is not up to date, it will be skipped \n')
+        #else :
+        self.price_data_train = price_data[price_data['stock'].isin(use)].loc[(price_data['Date'] < today)]    
+        price_data_test = price_data[price_data['stock'] == self.predict].loc[(price_data['Date'] == today)] # Extract data for stock to be predicted
+        
+        self.y_train = self.price_data_train['delta_class'].tolist() # Extract all outcomes for training
             
-            self.y_train = self.price_data_train['delta_class'].tolist() # Extract all outcomes for training
-                
-            self.features_name = record[self.model.replace(".csv", "")].dropna().tolist() 
-            self.features_name = [x for x in self.features_name if x in price_data.columns] # Account for potential feature store modifications, WARNING this can lead weaker predictions
-            self.X_train = self.price_data_train[self.features_name] # Load as class attribute the train set
-            self.X_test = price_data_test[self.features_name] # Load as class attribute todays data for the stock to predict
-            print('\n The folowing stock will predicted using the adjacent features :')
-            print(self.X_test)
-            print('\n')
+        self.features_name = record[self.model.replace(".csv", "")].dropna().tolist() 
+        self.features_name = [x for x in self.features_name if x in price_data.columns] # Account for potential feature store modifications, WARNING this can lead weaker predictions
+        self.X_train = self.price_data_train[self.features_name] # Load as class attribute the train set
+        self.X_test = price_data_test[self.features_name] # Load as class attribute todays data for the stock to predict
+        print('\n The folowing stock will predicted using the adjacent features :')
+        print(self.X_test)
+        print('\n')
 
         return 
     
@@ -221,49 +222,11 @@ class trade :
             print('\nUsing probability threshold of %a\n' %0.7)
             return 0.7, 0.3
         
-    def direction_control(self):
-        def gain(changes,factor):
-            value = [100000]
-            for ch, fa in zip(changes,factor):
-                value.append(value[-1]*(1+ch*(1/fa)/100))
-            return value[1:]
-        preds = pd.read_csv('./data/record_all_predictions.csv')
-        account = pd.read_csv('./data/account.csv').dropna()
-        account['Date'] = pd.to_datetime(account['Date'])
-        preds['Date'] = pd.to_datetime(preds['Date'])
-        account['outcome'] = account['Change_account_%']
-        account.loc[account['outcome']>0,'outcome'] = 1
-        account.loc[account['outcome']<=0,'outcome'] = -1
-        account = account.set_index(['Date'])
-        account = account.join(preds.groupby(['Date']).sum().abs()['Prediction']/preds.groupby(['Date']).count()['Prediction'], how='inner')
-        account = account.reset_index()
+    def quality_control(self):
         
-        levels = np.linspace(0,1,50)
-        result = []
-        level = []
-        for i in levels :
-            test2 = account[account['Prediction']<i]
-            if len(test2)>0 :
-                result.append(100*(gain(test2['Change_account_%'],test2['Trade_factor'])[-1]-100000)/100000)
-                level.append(i)
-         
-        direction_level = np.round(level[np.argmax(result)],3)
-        print('\nDirection level to be used is {}\n'.format(np.round(direction_level,3)))
-        data = pd.read_csv('./data/trade_data.csv')
-        data['Direction_control'] = data['Probabilities']
-        data.loc[data['Direction_control']>0.5,'Direction_control'] = 1
-        data.loc[data['Direction_control']<=0.5,'Direction_control'] = -1
-        direction = (data.groupby(['Date']).sum().abs()['Direction_control']/data.groupby(['Date']).count()['Direction_control']).iloc[0]        
-        
-        # if direction > direction_level :
-        #     df = pd.read_csv('./data/to_trade.csv')
-        #     df['temp'] = (df['Probability']-0.5).abs()
-        #     unique_trade = df.sort_values(['temp'], ascending = False).Products.iloc[0]
-        #     df = df[df['Products'] == unique_trade]
-        #     del df['temp']
-        #     df.to_csv('./data/to_trade.csv', index = False)
-        
-        if direction > direction_level :
+        quality = pred_quality()
+    
+        if quality[0]<0.5:
             self.DC_factor = 0.1
             df = pd.read_csv('./data/to_trade.csv')
             df['K%'] = df['K%']*self.DC_factor
@@ -501,7 +464,7 @@ class trade :
 
             if np.size(pd.read_csv('./data/to_trade.csv'))>0 :
                 self.distribution()
-                self.direction_control()
+                self.quality_control()
                 print('\nExecuting alpaca trading \n')
                 os.system("python alpaca_trading.py")
             else :

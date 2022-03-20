@@ -30,6 +30,7 @@ from email_updates_error import *
 from clean import *
 import re
 import MacTmp
+import shap
 warnings.simplefilter(action = 'ignore')
 
 def main():
@@ -39,12 +40,21 @@ def main():
          
 class market :
     def __init__(self) :
-        self.verify_features_store()
         self.path = os.getcwd()
         self.price_data = pd.read_csv('./data/features_store.csv',',')
         self.price_data = self.price_data.dropna(axis=1, thresh=int(np.shape(self.price_data)[0]*0.95))
         self.CPU_high_counter = 0
         self.threads = 10
+        
+        if len(glob.glob('./models/*.csv')) == 0 :
+            os.system('rm ./data/model_features.csv')
+            os.system('rm -r ./Best_models')
+            os.system('mkdir ./Best_models')
+            
+        record_model_available = len(glob.glob('./data/record_model.csv'))
+        if not record_model_available :
+            record = pd.DataFrame(columns=['date', 'model_name', 'stock', 'used', 'parameters', 'accuracy_test', 'ROC_test','trade_accuracy_test','days_traded_test', 'model_level_test_n','model_level_test_p', 'market_performance_test','model_performance_test', 'accuracy_live', 'ROC_live','trade_accuracy_live', 'days_traded_live','model_level_live_n','model_level_live_p', 'market_performance_live','model_performance_live','status'])
+            record.to_csv('./data/record_model.csv', index = False)  
         
         nyc_datetime = datetime.now(pytz.timezone('US/Eastern'))
         if (nyc_datetime.weekday() not in [5,6]) :
@@ -60,34 +70,6 @@ class market :
             end = nyc_datetime.replace(hour=16, minute=5, second=0,microsecond=0)
             if (nyc_datetime > start) & (nyc_datetime < end) :
                 time.sleep((end-nyc_datetime).seconds)
-        
-    def error_handling(self, error_message) :
-        today = datetime.today()
-        error_location = "model.py"
-        error_report = pd.DataFrame({'Date' : today.strftime('%Y - %m - %d'), 'Code_name' : [error_location], 'Message' : [error_message]})
-        error_report = error_report.set_index('Date')
-        error(error_report)
-        print(error_message)
-        print('Sub-code sleeping until user kill')
-        time.sleep(10000000)
-              
-    def verify_features_store(self):
-        price_data = pd.read_csv('./data/features_store.csv')
-        price_data['Date'] = pd.to_datetime(price_data['Date'])
-        today = datetime.today()
-        if price_data['Date'].iloc[0] < today - timedelta(days=50) :
-            error_message = "The features store has not been updated for ten or more days, this is evaluated as a fatal error as it can lead to incorrect models, please update features store"
-            self.error_handling(error_message)
-        
-        record_model_available = len(glob.glob('./data/record_model.csv'))
-        if not record_model_available :
-            record = pd.DataFrame(columns=['date', 'model_name', 'stock', 'used', 'parameters', 'accuracy_test', 'ROC_test','trade_accuracy_test','days_traded_test', 'model_level_test_n','model_level_test_p', 'market_performance_test','model_performance_test', 'accuracy_live', 'ROC_live','trade_accuracy_live', 'days_traded_live','model_level_live_n','model_level_live_p', 'market_performance_live','model_performance_live','status'])
-            record.to_csv('./data/record_model.csv', index = False)  
-            
-        if len(glob.glob('./models/*.csv')) == 0 :
-            os.system('rm ./data/model_features.csv')
-            os.system('rm -r ./Best_models')
-            os.system('mkdir ./Best_models')
         
     def files (self) :
         self.all = glob.glob(os.getcwd() + '/models/*.{}'.format('csv'))
@@ -106,6 +88,47 @@ class market :
             for f in filelist :
                 os.remove(f)
                 
+    def features (self) :
+        price_data = self.price_data.drop(['Date','delta_class','delta','stock'],1)
+            
+        return price_data.columns
+                
+    def pre_features(self) :
+        price_data = self.price_data
+        use = self.use 
+        price_data['Date'] = pd.to_datetime(price_data['Date']) 
+        dates = price_data['Date']
+        dates = dates.drop_duplicates()
+        
+        today = dates.iloc[0]
+        last_date = dates.iloc[1*(self.live>0)*5*(self.live+1) + 1*(self.test>0)*(105 + 5*(self.test+1))]
+        first_date = dates.iloc[1+1*(self.live>0)*5*(self.live+1) + 1*(self.test>0)*(105 + 5*(self.test+1))] # We chose 200 as upper limit
+        price_data = price_data.loc[(price_data['Date'] < today)]
+        price_data_train = price_data[price_data['stock'].isin(use)].loc[(price_data['Date'] < first_date)]
+        price_data_test = price_data[price_data['stock'] == self.predict].loc[(price_data['Date'] < last_date)]
+        price_data_test = price_data_test.loc[(price_data['Date'] >= first_date)]
+        y_train = price_data_train['delta_class'].tolist()
+        y_test = price_data_test['delta_class'].tolist() 
+        X_train = price_data_train[self.features()]
+        X_test = price_data_test[self.features()]
+        
+        train_data = lgb.Dataset(X_train,label=y_train)
+        num_round = 100
+        lgbm = lgb.train(self.parameters,train_data,num_round, verbose_eval=False)
+        
+        explainer = shap.TreeExplainer(lgbm)
+        shap_values = explainer.shap_values(X_test)
+        values = np.sum(np.abs(shap_values), axis=0)
+        values = np.mean(values, axis=0)
+        df = pd.DataFrame({'features' : X_test.columns, 'value' : values}).sort_values(by=['value'], ascending=False)
+        feature_imp = df[df['value']>self.shaps]
+        
+        record_features = pd.read_csv('./data/model_features.csv')
+        record_features = record_features.drop([self.model.replace(".csv", "")], axis=1)
+        df = pd.DataFrame({self.model.replace(".csv", "") : feature_imp['features'].tolist()})
+        record_features = pd.concat([record_features, df], axis=1)
+        record_features.to_csv('./data/model_features.csv', index = False)
+        
     def prep(self) :
         price_data = self.price_data
         use = self.use 
@@ -114,8 +137,8 @@ class market :
         dates = dates.drop_duplicates()
         #dates = dates.iloc[100:]
         today = dates.iloc[0]
-        last_date = dates.iloc[5*(self.live) + 1*(self.test>0)*(105 + 5*self.test)]
-        first_date = dates.iloc[1*(self.live>0)*5*(self.live+1) + 1*(self.test>0)*(105 + 5*(self.test+1))] # We chose 200 as upper limit
+        last_date = dates.iloc[5*(self.live) + 1*(self.test>0)*(55 + 5*self.test)]
+        first_date = dates.iloc[1*(self.live>0)*5*(self.live+1) + 1*(self.test>0)*(55 + 5*(self.test+1))] # We chose 200 as upper limit
         price_data = price_data.loc[(price_data['Date'] < today)]
         self.price_data_train = price_data[price_data['stock'].isin(use)].loc[(price_data['Date'] < first_date)]
         self.price_data_test = price_data[price_data['stock'] == self.predict].loc[(price_data['Date'] < last_date)]
@@ -130,6 +153,39 @@ class market :
         self.X_test = self.price_data_test[self.features_name]
             
         return 
+    
+    def post(self) :
+        price_data = self.price_data
+        use = self.use 
+        price_data['Date'] = pd.to_datetime(price_data['Date']) 
+        dates = price_data['Date']
+        dates = dates.drop_duplicates()
+        last_date = dates.iloc[0]
+        first_date = dates.iloc[1] 
+        price_data = price_data.loc[(price_data['Date'] < last_date)]
+        price_data_train = price_data[price_data['stock'].isin(use)].loc[(price_data['Date'] < first_date)]
+        price_data_test = price_data[price_data['stock'] == self.predict].loc[(price_data['Date'] >= first_date)]
+        y_train = price_data_train['delta_class'].tolist()
+        y_test = price_data_test['delta_class'].tolist()                 
+        X_train = price_data_train[self.features()]
+        X_test = price_data_test[self.features()]
+        
+        train_data = lgb.Dataset(X_train,label=y_train)
+        num_round = 100
+        lgbm = lgb.train(self.parameters,train_data,num_round, verbose_eval=False)
+        
+        explainer = shap.TreeExplainer(lgbm)
+        shap_values = explainer.shap_values(X_test)
+        values = np.sum(np.abs(shap_values), axis=0)
+        values = np.mean(values, axis=0)
+        df = pd.DataFrame({'features' : X_test.columns, 'value' : values}).sort_values(by=['value'], ascending=False)
+        feature_imp = df[df['value']>self.shaps]
+        
+        record_features = pd.read_csv('./data/model_features.csv')
+        record_features = record_features.drop([self.model.replace(".csv", "")], axis=1)
+        df = pd.DataFrame({self.model.replace(".csv", "") : feature_imp['features'].tolist()})
+        record_features = pd.concat([record_features, df], axis=1)
+        record_features.to_csv('./data/model_features.csv', index = False)
         
     def record(self):
         record = pd.read_csv('./data/record_model.csv')
@@ -193,12 +249,11 @@ class market :
             Stocks to use to reinforce train set"
         `self.n_features : list
             Number of features to use"
-        `self.use_weights : int
-            Indicate to system whether feature weights should be used or not, takes 0 or 1
         """
         
         parameters = pd.read_csv(model)
         model = model.split('/')[-1]
+        self.shaps = float(model.split('-')[-1].replace('.csv',''))
         hold = ''.join([i for i in model if not i.isdigit()])
         hold = hold.split('-')
         if '' in hold: hold.remove('')
@@ -292,7 +347,6 @@ class market :
         
         self.files()            
         for model in self.all :
-            
             #Check CPU temperature
             CPU = float(re.findall(r"[-+]?\d*\.\d+|\d+",MacTmp.CPU_Temp())[0])
             print('\nCurrent CPU temperature is %a °C\n' %CPU)  # To get CPU Temperature
@@ -321,6 +375,7 @@ class market :
             self.live = 0
             for i in range (1,20):
                 self.test = i
+                self.pre_features()
                 self.prep()
                 if len(self.y_test)>0:
                     self.ml_model()
@@ -357,9 +412,10 @@ class market :
             self.proba = []
             variations = []
             self.test = 0
-            for i in range (1,16):
+            for i in range (1,10):
                 self.live = i
                 self.prep()
+                self.pre_features()
                 if len(self.y_test)>0:
                     self.ml_model ()
                     self.prediction.extend(self.y_pred)
@@ -405,6 +461,7 @@ class market :
                 print('\n Passed test \n')
                 print(model, '\n Will be selected \n')
                 shutil.copyfile(os.getcwd() + '/models/' + self.model, os.getcwd() + '/Best_models/' + self.model)
+                self.post()
                 self.status = 1 
             else :
                 print('\n Failed test \n')
