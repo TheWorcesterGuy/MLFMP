@@ -65,7 +65,7 @@ def main():
         
         market().execute()
                 
-        os.system("python model_evaluate.py")
+        os.system("python model_dev.py")
         
 class market :
     def __init__(self) :

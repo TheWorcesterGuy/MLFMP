@@ -153,7 +153,12 @@ def f_acc(p = 0.6, l = 60, probability = True, acc_level = False, plots = False,
         
     if p < 0.5 :
         p = 1-p
-    acc_p = acc[np.where(np.array(level)>p)[0][0]]
+        
+    try :
+        acc_p = acc[np.where(np.array(level)>p)[0][0]]
+    except :
+        print('No accuracy level found, setting level to 60%')
+        acc_p=60
     
     if verbose :
         print('\nUsing probability threshold of %a\n' %np.round(p_level,2))

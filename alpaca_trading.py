@@ -112,9 +112,10 @@ def distribution(api, buying_power) :
     Variability = []
     
     for stock in df['Products'] :
-        barset = api.get_barset(stock, 'day', limit=5)
-        bars = barset[stock]
-        Last_Stock_Value.append(bars[-1].c + bars[-1].c * 0.02)
+        barset = api.get_bars(stock, TimeFrame.Hour, (datetime.now() - timedelta(days=4)).strftime('%Y-%m-%d'),
+                        (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d'),limit=10000000000,adjustment='raw').df
+        bars_last = barset['close'].iloc[-1]
+        Last_Stock_Value.append(bars_last + bars_last * 0.02)
         side = df['Side'] [df['Products'] == stock].iloc[0]
         
         if side < 0 :

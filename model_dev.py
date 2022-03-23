@@ -137,8 +137,8 @@ class market :
         dates = dates.drop_duplicates()
         #dates = dates.iloc[100:]
         today = dates.iloc[0]
-        last_date = dates.iloc[5*(self.live) + 1*(self.test>0)*(55 + 5*self.test)]
-        first_date = dates.iloc[1*(self.live>0)*5*(self.live+1) + 1*(self.test>0)*(55 + 5*(self.test+1))] # We chose 200 as upper limit
+        last_date = dates.iloc[5*(self.live) + 1*(self.test>0)*(25 + 5*self.test)]
+        first_date = dates.iloc[1*(self.live>0)*5*(self.live+1) + 1*(self.test>0)*(25 + 5*(self.test+1))] # We chose 200 as upper limit
         price_data = price_data.loc[(price_data['Date'] < today)]
         self.price_data_train = price_data[price_data['stock'].isin(use)].loc[(price_data['Date'] < first_date)]
         self.price_data_test = price_data[price_data['stock'] == self.predict].loc[(price_data['Date'] < last_date)]
@@ -373,7 +373,7 @@ class market :
             self.proba = []
             variations = []
             self.live = 0
-            for i in range (1,20):
+            for i in range (1,5):
                 self.test = i
                 self.pre_features()
                 self.prep()
@@ -412,7 +412,7 @@ class market :
             self.proba = []
             variations = []
             self.test = 0
-            for i in range (1,10):
+            for i in range (1,5):
                 self.live = i
                 self.prep()
                 self.pre_features()
@@ -452,7 +452,7 @@ class market :
             print('\n Using pass threshold of', np.round(pass_threshold,2))
             if  (self.ROC_test > pass_threshold) &  (self.ROC_live > pass_threshold) & \
                     (self.accuracy_test_trade > pass_threshold) & (self.accuracy_live_trade > pass_threshold) & \
-                        (self.days_test > int(150*percent_days)) & (self.days_live > int(100*percent_days)) :
+                        (self.days_test > int(25*percent_days)) & (self.days_live > int(25*percent_days)) :
                 self.test = 1
             else :
                 self.test = 0
